@@ -12,7 +12,7 @@ app.use(cookieParser());
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 
-const dataFile = path.join(__dirname, 'data.json');
+const datafile = path.join(__dirname, 'data.json');
 const usersFile = path.join(__dirname, 'users.json');
 
 function readData(filePath) {
@@ -32,18 +32,20 @@ app.use((req, res, next) => {
   const email = req.cookies.user_email;
   if (email) {
     const users = readData(usersFile);
-    if (user && (user.name === "Pengguna Facebook" || user.name.toLowerCase().includes("user.fb"))) {
-      user.name = cleanName;
-      writeData(usersFile, users);
+    const foundUser = users.find(u => u.email === email);
+    if (foundUser) {
+      if (foundUser.name === "Pengguna Facebook" || (foundUser.name && foundUser.name.toLowerCase().includes("user.fb"))) {
+        foundUser.name = email.split('@')[0];
+        writeData(usersFile, users);
+      }
+      req.user = foundUser;
     }
-    const user = users.find(u => u.email === email);
-    if (user) req.user = user;
   }
   next();
 });
 
 app.get('/', (req, res) => {
-  const products = readData(dataFile);
+  const products = readData(datafile);
   const { search, category, condition, location } = req.query;
   
   let filtered = products;
@@ -59,6 +61,7 @@ app.get('/', (req, res) => {
   if (location && location !== 'Semua') {
     filtered = filtered.filter(p => p.location.toLowerCase().includes(location.toLowerCase()));
   }
+  
   filtered.sort((a, b) => b.id - a.id);
   
   res.render('index', {
@@ -81,7 +84,7 @@ app.post('/login', (req, res) => {
 
   const cleanEmail = email.trim().toLowerCase();
   let cleanName = name ? name.trim() : '';
-  
+
   if (!cleanName || cleanName === 'Pengguna Facebook' || cleanName.toLowerCase().includes('user.fb')) {
     cleanName = cleanEmail.split('@')[0];
   }
@@ -121,7 +124,7 @@ app.post('/login', (req, res) => {
 
 app.get('/profile', (req, res) => {
   if (!req.user) return res.redirect('/login');
-  const products = readData(dataFile);
+  const products = readData(datafile);
   const myProducts = products.filter(p => p.seller_email === req.user.email);
   res.render('profile', { user: req.user, products: myProducts });
 });
@@ -150,3 +153,4 @@ app.get('/logout', (req, res) => {
 app.listen(PORT, () => {
   console.log(`LAPAKBEKAS.ID Aktif di http://localhost:${PORT}`);
 });
+
