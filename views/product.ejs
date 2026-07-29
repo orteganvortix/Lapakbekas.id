@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= product.title %> - LAPAKBEKAS.ID</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen">
+    
+    <header class="bg-emerald-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="/" class="text-xl font-black tracking-wider">
+                LAPAK<span class="text-amber-300">BEKAS</span>.ID
+            </a>
+            <a href="/" class="bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Beranda</a>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-2xl w-full mx-auto px-4 py-6">
+        <div class="bg-white rounded-2xl border overflow-hidden shadow-sm">
+            
+            <!-- Slider Foto Produk (Mendukung hingga 10 Foto dengan Tombol Geser) -->
+            <div class="relative bg-slate-900 h-72 md:h-96 flex items-center justify-center overflow-hidden">
+                <% 
+                    let imgList = product.images && product.images.length > 0 ? product.images : [product.image]; 
+                %>
+                
+                <div id="sliderContainer" class="w-full h-full flex transition-transform duration-300 ease-in-out">
+                    <% imgList.forEach((img, idx) => { %>
+                        <div class="w-full h-full flex-shrink-0 flex items-center justify-center bg-slate-900">
+                            <img src="<%= img %>" alt="Foto <%= idx+1 %>" class="max-w-full max-h-full object-contain">
+                        </div>
+                    <% }) %>
+                </div>
+
+                <% if (imgList.length > 1) { %>
+                    <button onclick="prevSlide()" class="absolute left-2 bg-black/50 text-white p-2 rounded-full hover:bg-black/80">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button onclick="nextSlide()" class="absolute right-2 bg-black/50 text-white p-2 rounded-full hover:bg-black/80">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                    <div class="absolute bottom-3 bg-black/60 text-white text-[10px] px-3 py-1 rounded-full">
+                        <span id="currentSlideIdx">1</span> / <%= imgList.length %> Foto
+                    </div>
+                <% } %>
+
+                <span class="absolute top-4 left-4 bg-slate-900/80 text-white text-xs font-semibold px-3 py-1 rounded-lg">
+                    <%= product.condition %>
+                </span>
+            </div>
+
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <span class="text-xs text-emerald-600 font-bold uppercase"><%= product.category %></span>
+                        <h1 class="text-xl font-extrabold text-slate-800 mt-0.5"><%= product.title %></h1>
+                    </div>
+                    <p class="text-xl font-black text-emerald-600">Rp <%= product.price.toLocaleString('id-ID') %></p>
+                </div>
+
+                <div class="flex items-center gap-4 text-xs text-slate-500 my-4 pb-4 border-b">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-location-dot"></i> <%= product.location %></span>
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-clock"></i> <%= product.created_at %></span>
+                </div>
+
+                <div class="bg-slate-50 border rounded-xl p-3.5 mb-4 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold overflow-hidden flex-shrink-0">
+                        <img src="<%= seller.avatar %>" alt="" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Penjual</p>
+                        <p class="text-xs font-bold text-slate-800"><%= seller.name %></p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-2">Deskripsi Lengkap</h3>
+                    <p class="text-slate-700 text-xs whitespace-pre-line leading-relaxed bg-slate-50 p-4 rounded-xl border"><%= product.description %></p>
+                </div>
+
+                <div class="pt-2">
+                    <a href="https://wa.me/<%= product.whatsapp %>?text=Halo,%20saya%20tertarik%20dengan%20<%= encodeURIComponent(product.title) %>" 
+                       target="_blank" 
+                       class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md">
+                        <i class="fa-brands fa-whatsapp text-base"></i> Hubungi Penjual via WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 text-xs py-6 text-center mt-auto border-t">
+        <p class="font-bold text-slate-300">LAPAKBEKAS.ID &copy; 2026</p>
+    </footer>
+
+    <script>
+        let currentIdx = 0;
+        const totalSlides = <%= imgList.length %>;
+
+        function updateSlider() {
+            const container = document.getElementById('sliderContainer');
+            container.style.transform = `translateX(-${currentIdx * 100}%)`;
+            if(document.getElementById('currentSlideIdx')) {
+                document.getElementById('currentSlideIdx').innerText = currentIdx + 1;
+            }
+        }
+
+        function nextSlide() {
+            currentIdx = (currentIdx + 1) % totalSlides;
+            updateSlider();
+        }
+
+        function prevSlide() {
+            currentIdx = (currentIdx - 1 + totalSlides) % totalSlides;
+            updateSlider();
+        }
+    </script>
+</body>
+</html>

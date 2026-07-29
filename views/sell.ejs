@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pasang Iklan - LAPAKBEKAS.ID</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen">
+    
+    <header class="bg-emerald-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="/" class="text-xl font-black tracking-wider">
+                LAPAK<span class="text-amber-300">BEKAS</span>.ID
+            </a>
+            <a href="/profile" class="bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Kembali</a>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-xl w-full mx-auto px-4 py-6">
+        <div class="bg-white rounded-2xl border p-6 shadow-sm">
+            <div class="mb-6 border-b pb-4">
+                <h1 class="text-lg font-extrabold text-slate-800">Pasang Iklan Barang</h1>
+                <p class="text-slate-500 text-xs mt-0.5">Upload 1 hingga 10 foto dan tentukan wilayah COD lengkap.</p>
+            </div>
+
+            <form action="/sell" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Judul Barang</label>
+                    <input type="text" name="title" required placeholder="Contoh: Honda Vario 150 / HP Samsung" 
+                        class="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Harga (Rp - Otomatis Titik)</label>
+                        <!-- Input dengan pemisah titik otomatis -->
+                        <input type="text" id="priceInput" name="price" required placeholder="Contoh: 150.000" onkeyup="formatRupiah(this)"
+                            class="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Kategori</label>
+                        <select name="category" class="w-full px-3.5 py-2.5 rounded-xl border text-xs bg-white">
+                            <option value="Elektronik & Gadget">Elektronik & Gadget</option>
+                            <option value="Kendaraan">Kendaraan</option>
+                            <option value="Perabotan Rumah">Perabotan Rumah</option>
+                            <option value="Hobi & Lainnya">Hobi & Lainnya</option>
+                        </select>
+                    </div>
+                </div>
+
+		<div class="space-y-3 bg-slate-50 p-4 rounded-xl border">
+    <label class="block text-xs font-bold text-slate-700">Wilayah COD (Cakupan Seluruh Indonesia)</label>
+    
+    <!-- Hidden input untuk menyimpan hasil gabungan teks wilayah lengkap -->
+    <input type="hidden" name="location" id="fullLocation" required>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <!-- Pilihan Provinsi -->
+        <div>
+            <label class="block text-[10px] font-semibold text-slate-500 mb-1">Provinsi</label>
+            <select id="provinsi" class="w-full px-3 py-2 rounded-xl border text-xs bg-white focus:ring-2 focus:ring-emerald-500" onchange="loadKabupaten()">
+                <option value="">Pilih Provinsi...</option>
+            </select>
+        </div>
+
+        <!-- Pilihan Kabupaten / Kota -->
+        <div>
+            <label class="block text-[10px] font-semibold text-slate-500 mb-1">Kabupaten / Kota</label>
+            <select id="kabupaten" class="w-full px-3 py-2 rounded-xl border text-xs bg-white focus:ring-2 focus:ring-emerald-500" onchange="loadKecamatan()" disabled>
+                <option value="">Pilih Kabupaten/Kota...</option>
+            </select>
+        </div>
+
+        <!-- Pilihan Kecamatan -->
+        <div>
+            <label class="block text-[10px] font-semibold text-slate-500 mb-1">Kecamatan</label>
+            <select id="kecamatan" class="w-full px-3 py-2 rounded-xl border text-xs bg-white focus:ring-2 focus:ring-emerald-500" onchange="updateFinalLocation()" disabled>
+                <option value="">Pilih Kecamatan...</option>
+            </select>
+        </div>
+    </div>
+    <p class="text-[10px] text-emerald-600 font-medium" id="selectedPreview">Wilayah terpilih: Belum ditentukan</p>
+</div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Nomor WhatsApp</label>
+                    <input type="text" name="whatsapp" required placeholder="628xxxxxxxxxx" 
+                        class="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Deskripsi Lengkap</label>
+                    <textarea name="description" rows="3" required placeholder="Jelaskan spesifikasi dan minus..." 
+                        class="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:ring-2 focus:ring-emerald-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Foto Produk (Minimal 1, Maksimal 10 Foto)</label>
+                    <input type="file" name="images" accept="image/*" multiple required
+                        class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-emerald-50 file:text-emerald-700">
+                    <p class="text-[10px] text-slate-400 mt-1">Anda bisa memilih sekaligus banyak foto dari galeri HP Anda.</p>
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <a href="/profile" class="w-1/3 bg-slate-100 text-slate-700 font-semibold py-3 rounded-xl text-center text-xs">Batal</a>
+                    <button type="submit" class="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow-md">
+                        Terbitkan Iklan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 text-xs py-6 text-center mt-auto border-t">
+        <p class="font-bold text-slate-300">LAPAKBEKAS.ID &copy; 2026</p>
+    </footer>
+
+    <script>
+        // Fungsi otomatis format titik ribuan harga
+        function formatRupiah(input) {
+            let value = input.value.replace(/[^,\d]/g, '').toString();
+            let split = value.split(',');
+            let sisa = split[0].length % 3;
+            let rupiah = split[0].substr(0, sisa);
+            let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+            
+            if (ribuan) {
+                let separator = sisa ? '.' : '';
+                rupiah += separator + ribuan.join('.');
+            }
+            input.value = rupiah;
+        }
+    </script>
+
+<script>
+    // Load data Provinsi saat halaman dibuka
+    document.addEventListener("DOMContentLoaded", () => {
+        fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')
+            .then(response => response.json())
+            .then(provinces => {
+                let provinsiSelect = document.getElementById('provinsi');
+                provinces.forEach(prov => {
+                    let opt = document.createElement('option');
+                    opt.value = prov.id;
+                    opt.text = prov.name;
+                    provinsiSelect.appendChild(opt);
+                });
+            })
+            .catch(err => console.error("Gagal memuat data provinsi:", err));
+    });
+
+    // Load data Kabupaten/Kota berdasarkan Provinsi yang dipilih
+    function loadKabupaten() {
+        let provId = document.getElementById('provinsi').value;
+        let kabSelect = document.getElementById('kabupaten');
+        let kecSelect = document.getElementById('kecamatan');
+        
+        kabSelect.innerHTML = '<option value="">Pilih Kabupaten/Kota...</option>';
+        kecSelect.innerHTML = '<option value="">Pilih Kecamatan...</option>';
+        kabSelect.disabled = !provId;
+        kecSelect.disabled = true;
+
+        if (!provId) return;
+
+        fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${provId}.json`)
+            .then(response => response.json())
+            .then(regencies => {
+                regencies.forEach(reg => {
+                    let opt = document.createElement('option');
+                    opt.value = reg.id;
+                    opt.text = reg.name;
+                    kabSelect.appendChild(opt);
+                });
+            });
+    }
+
+    // Load data Kecamatan berdasarkan Kabupaten/Kota yang dipilih
+    function loadKecamatan() {
+        let kabId = document.getElementById('kabupaten').value;
+        let kecSelect = document.getElementById('kecamatan');
+        
+        kecSelect.innerHTML = '<option value="">Pilih Kecamatan...</option>';
+        kecSelect.disabled = !kabId;
+
+        if (!kabId) return;
+
+        fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/districts/${kabId}.json`)
+            .then(response => response.json())
+            .then(districts => {
+                districts.forEach(dist => {
+                    let opt = document.createElement('option');
+                    opt.value = dist.name;
+                    opt.text = dist.name;
+                    kecSelect.appendChild(opt);
+                });
+            });
+    }
+
+    // Gabungkan hasil pilihan menjadi string teks untuk disimpan ke database
+    function updateFinalLocation() {
+        let provText = document.getElementById('provinsi').selectedOptions[0].text;
+        let kabText = document.getElementById('kabupaten').selectedOptions[0].text;
+        let kecText = document.getElementById('kecamatan').value;
+
+        if (kecText) {
+            let fullString = `Kec. ${kecText}, ${kabText}, ${provText}`;
+            document.getElementById('fullLocation').value = fullString;
+            document.getElementById('selectedPreview').innerText = "Wilayah terpilih: " + fullString;
+        }
+    }
+</script>
+
+</body>
+</html>

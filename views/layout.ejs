@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAPAKSEKEN.ID - Jual Beli Barang Bekas Terpercaya</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen">
+
+    <!-- Navbar -->
+    <header class="bg-emerald-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="/" class="text-xl font-black tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-store"></i> LAPAK<span class="text-amber-300">SEKEN</span>.ID
+            </a>
+            <a href="/sell" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-semibold px-4 py-2 rounded-lg text-sm shadow transition flex items-center gap-1.5">
+                <i class="fa-solid fa-plus-circle"></i> Jual Barang
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 py-6">
+        <%- body %>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-6 text-center mt-auto border-t border-slate-800">
+        <div class="max-w-5xl mx-auto px-4">
+            <p class="font-semibold text-slate-300">LAPAKSEKEN.ID &copy; 2026</p>
+            <p class="mt-1">Platform Jual Beli Barang Bekas Lokal Berbasis Termux</p>
+        </div>
+    </footer>
+
+</body>
+</html>
+
