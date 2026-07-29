@@ -76,7 +76,7 @@ app.get('/', (req, res) => {
 
 app.get('/login', (req, res) => {
   if (req.user) return res.redirect('/profile');
-  res.render('login');
+  res.render('login', { user: req.user || null });
 });
 
 app.post('/login', (req, res) => {
