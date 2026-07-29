@@ -119,36 +119,42 @@ app.get('/login', (req, res) => {
   return res.render('login', { user: null });
 });
 
-// Proses Simpan Data Login Gmail & Form Lengkap
-app.post('/login', (req, res) => {
-  try {
-    let email = (req.body.email || '').trim().toLowerCase();
-    let name = (req.body.name || '').trim();
-    let phone = (req.body.phone || '').trim();
-    let location = (req.body.location || '').trim();
 
-    if (!email) email = 'user_' + Math.floor(Math.random() * 90000 + 10000) + '@gmail.com';
-    if (!name) name = email.split('@')[0];
+app.post('/auth/google/callback', async (req, res) => {
+  try {
+    const token = req.body.credential;
+    // Lakukan dekode/verifikasi token dari Google
+    // Contoh sederhana parsing payload Google JWT:
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+
+    const email = payload.email;
+    const name = payload.name;
+    const avatar = payload.picture;
+    const emailVerified = payload.email_verified;
+
+    // Jika email tidak terverifikasi oleh google, tolak!
+    if (!emailVerified) {
+      return res.redirect('/login?error=unverified');
+    }
 
     let users = readData(usersFile);
-    let user = users.find(u => u.email && u.email.toLowerCase() === email);
+    let user = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
 
     if (!user) {
-      user = { 
-        email: email, 
-        name: name, 
-        phone: phone, 
-        location: location || 'Cisarua, Bogor, Jawa Barat', 
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb', 
-        provider: 'google' 
+      // Buat akun baru otomatis dari data valid Google
+      user = {
+        email: email,
+        name: name,
+        avatar: avatar,
+        phone: '',
+        location: 'Cisarua, Bogor, Jawa Barat',
+        provider: 'google_oauth'
       };
       users.push(user);
-    } else {
-      user.name = name || user.name;
-      user.phone = phone || user.phone;
-      if (location) user.location = location;
+      writeData(usersFile, users);
     }
-    writeData(usersFile, users);
 
     res.cookie('user_email', email, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
     return res.redirect('/profile');
