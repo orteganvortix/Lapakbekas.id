@@ -83,30 +83,29 @@ app.get('/', (req, res) => {
   }
 });
 
-// Penanganan Universal GET & POST untuk Login (Mendukung Facebook / Dummy / Manual)
 app.all('/login', (req, res) => {
   try {
-    // Jika diakses via GET murni tanpa parameter login dan belum punya sesi, tampilkan halaman login
-    if (req.method === 'GET' && !req.query.email && !req.query.name && !req.query.provider) {
+    if (req.method === 'GET' && !req.query.email && !req.query.name && !req.query.id) {
       if (req.user) return res.redirect('/profile');
       return res.render('login', { user: null, currentUser: null });
     }
 
     let email = req.body.email || req.query.email;
     let name = req.body.name || req.query.name;
-    let provider = req.body.provider || req.query.provider || 'facebook';
+    let fbId = req.body.id || req.query.id;
+    let avatar = req.body.picture || req.query.picture;
+    let provider = 'facebook';
 
-    if (!email) {
-      const randomId = Math.floor(Math.random() * 90000) + 10000;
-      email = `fb_user_${randomId}@facebook.com`;
+    if (!email && fbId) {
+      email = `fb_${fbId}@facebook.com`;
     }
-    if (!name) {
-      name = 'Pengguna Facebook';
+    if (!email) {
+      email = `fb_user_${Math.floor(Math.random() * 90000) + 10000}@facebook.com`;
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanName = name.trim();
-    const autoAvatar = 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f65';
+    const cleanName = name ? name.trim() : 'Pengguna Facebook';
+    const userAvatar = avatar ? avatar.trim() : 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f65';
 
     let users = readData(usersFile);
     let user = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
@@ -117,8 +116,9 @@ app.all('/login', (req, res) => {
         name: cleanName,
         phone: '',
         location: '',
-        avatar: autoAvatar,
+        avatar: userAvatar,
         provider: provider,
+        facebook_id: fbId || '',
         joined_at: new Date().toLocaleDateString('id-ID')
       };
       users.push(user);
@@ -166,23 +166,32 @@ app.get('/sell', (req, res) => {
   return res.render('sell', { user: req.user, currentUser: req.user });
 });
 
+// Perbaikan Total pada Penanganan Form Tambah Iklan (Sell)
 app.post('/sell', (req, res) => {
   try {
     if (!req.user) return res.redirect('/login');
     
-    const { title, price, category, condition, location, description, image } = req.body;
+    // Menangkap seluruh kemungkinan nama field dari form frontend Anda
+    const title = req.body.title || req.body.nama_barang || req.body.judul;
+    const price = req.body.price || req.body.harga;
+    const category = req.body.category || req.body.kategori;
+    const condition = req.body.condition || req.body.kondisi;
+    const location = req.body.location || req.body.lokasi || req.user.location;
+    const description = req.body.description || req.body.deskripsi;
+    const image = req.body.image || req.body.foto || req.body.img;
+
     const products = readData(datafile);
     const lastId = products.length > 0 ? (Number(products[products.length - 1].id) || products.length) : 0;
     
     const newProduct = {
       id: lastId + 1,
-      title: title ? title.trim() : 'Tanpa Judul',
-      price: Number(price) || 0,
-      category: category || 'Lainnya',
-      condition: condition || 'Bekas',
-      location: location || 'Indonesia',
-      description: description ? description.trim() : '',
-      image: image ? image.trim() : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
+      title: title ? String(title).trim() : 'Tanpa Judul',
+      price: price ? Number(String(price).replace(/[^0-9]/g, '')) || 0 : 0,
+      category: category ? String(category).trim() : 'Lainnya',
+      condition: condition ? String(condition).trim() : 'Bekas',
+      location: location ? String(location).trim() : 'Indonesia',
+      description: description ? String(description).trim() : '',
+      image: image ? String(image).trim() : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
       seller_email: req.user.email,
       seller_name: req.user.name,
       seller_phone: req.user.phone || '',
