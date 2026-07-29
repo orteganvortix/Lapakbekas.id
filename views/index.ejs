@@ -12,11 +12,11 @@
             <a href="/" class="text-lg font-black tracking-wider">LAPAKBEKAS<span class="text-emerald-400">.ID</span></a>
             <div class="flex items-center gap-2">
                 <% if (user) { %>
-                    <a href="/profile" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">Profil</a>
+                    <a href="/profile" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-bold text-xs">Profil</a>
                 <% } else { %>
-                    <a href="/login" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-bold text-xs transition">Masuk</a>
+                    <a href="/login" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-bold text-xs">Masuk</a>
                 <% } %>
-                <a href="/sell" class="bg-amber-400 hover:bg-amber-500 text-emerald-950 px-3 py-1.5 rounded-xl font-black text-xs shadow-sm transition">+ Jual</a>
+                <a href="/sell" class="bg-amber-400 hover:bg-amber-500 text-emerald-950 px-3 py-1.5 rounded-xl font-black text-xs shadow-sm">+ Jual</a>
             </div>
         </div>
     </nav>
@@ -26,13 +26,18 @@
             <div class="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-3xl p-5 text-white shadow-lg space-y-4">
                 <div class="space-y-1">
                     <h1 class="text-xl font-black tracking-tight">Cari Barang Bekas Sekitar Anda</h1>
-                    <p class="text-xs text-emerald-100">Rekomendasi barang layak pakai langsung dari wilayah terdekat.</p>
+                    <p class="text-xs text-emerald-100 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-green-300 animate-pulse" id="gpsStatusDot"></span>
+                        <span id="gpsStatusText">Mendeteksi titik koordinat GPS terdekat...</span>
+                    </p>
                 </div>
 
-                <form action="/" method="GET" class="space-y-3">
+                <form action="/" method="GET" id="filterForm" class="space-y-3">
+                    <input type="hidden" name="lat" id="inputLat" value="<%= userLat %>">
+                    <input type="hidden" name="lon" id="inputLon" value="<%= userLon %>">
+
                     <input type="text" name="search" value="<%= search %>" placeholder="Cari barang (misal: Vario, HP, TV)..." class="w-full bg-white text-gray-800 text-xs rounded-xl px-4 py-3 font-medium focus:outline-none shadow-sm">
 
-                    <!-- Pilihan Kategori -->
                     <select name="category" id="categorySelect" onchange="updateBrands()" class="w-full bg-white text-gray-800 text-xs rounded-xl px-4 py-3 font-medium focus:outline-none shadow-sm">
                         <option value="Semua" <%= selectedCategory === 'Semua' ? 'selected' : '' %>>Semua Kategori</option>
                         <option value="Elektronik & Gadget" <%= selectedCategory === 'Elektronik & Gadget' ? 'selected' : '' %>>Elektronik & Gadget</option>
@@ -41,19 +46,9 @@
                         <option value="Hobi & Lainnya" <%= selectedCategory === 'Hobi & Lainnya' ? 'selected' : '' %>>Hobi & Lainnya</option>
                     </select>
 
-                    <!-- Pilihan Merk / Type (Sesuai Permintaan: Setelah jenis barang sebelum terapkan filter) -->
                     <select name="brand" id="brandSelect" class="w-full bg-white text-gray-800 text-xs rounded-xl px-4 py-3 font-medium focus:outline-none shadow-sm">
                         <option value="Semua">Semua Merk / Type</option>
                     </select>
-
-                    <div class="flex gap-2">
-                        <select name="location" class="w-full bg-white text-gray-800 text-xs rounded-xl px-4 py-3 font-medium focus:outline-none shadow-sm">
-                            <option value="Semua" <%= selectedLocation === 'Semua' ? 'selected' : '' %>>Semua Wilayah / Kecamatan</option>
-                            <% locations.forEach(loc => { %>
-                                <option value="<%= loc %>" <%= selectedLocation === loc ? 'selected' : '' %>><%= loc %></option>
-                            <% }) %>
-                        </select>
-                    </div>
 
                     <button type="submit" class="w-full bg-[#0d1b2a] hover:bg-[#1b263b] text-white font-bold py-3 rounded-xl text-xs transition shadow-md">Terapkan Filter</button>
                 </form>
@@ -63,13 +58,13 @@
 
     <main class="max-w-md mx-auto px-4 py-6 flex-1 w-full space-y-4">
         <div class="flex justify-between items-center">
-            <h2 class="text-xs font-black uppercase tracking-wider text-gray-700">Rekomendasi Barang Tersedia</h2>
+            <h2 class="text-xs font-black uppercase tracking-wider text-gray-700">Rekomendasi Terdekat Tersedia</h2>
             <span class="bg-gray-200 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-full"><%= products.length %> barang</span>
         </div>
 
         <% if (products.length === 0) { %>
             <div class="bg-white rounded-3xl border border-gray-100 p-8 text-center shadow-sm space-y-4">
-                <p class="text-xs font-bold text-gray-600">Tidak ada barang di wilayah ini.</p>
+                <p class="text-xs font-bold text-gray-600">Tidak ada barang di wilayah terdekat.</p>
                 <a href="/" class="inline-block bg-[#0d1b2a] text-white font-bold px-6 py-2.5 rounded-xl text-xs">Reset Filter</a>
             </div>
         <% } else { %>
@@ -112,6 +107,31 @@
             }
         }
         updateBrands();
+
+        // Ambil Koordinat GPS Otomatis
+        window.addEventListener('DOMContentLoaded', () => {
+            const latInput = document.getElementById('inputLat');
+            const lonInput = document.getElementById('inputLon');
+            const statusText = document.getElementById('gpsStatusText');
+
+            if (!latInput.value && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        latInput.value = position.coords.latitude;
+                        lonInput.value = position.coords.longitude;
+                        statusText.innerText = "Lokasi GPS aktif, menampilkan produk terdekat.";
+                        // Auto submit jika belum ada parameter koordinat sebelumnya
+                        document.getElementById('filterForm').submit();
+                    },
+                    (error) => {
+                        statusText.innerText = "Menggunakan wilayah default terdekat.";
+                    },
+                    { timeout: 10000 }
+                );
+            } else if (latInput.value) {
+                statusText.innerText = "Titik koordinat GPS terpasang.";
+            }
+        });
     </script>
 </body>
 </html>

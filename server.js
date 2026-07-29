@@ -76,9 +76,9 @@ const BRANDS_BY_CATEGORY = {
 app.get('/', (req, res) => {
   try {
     const products = readData(datafile);
-    const { search, category, brand, condition, location } = req.query;
+    const { search, category, brand, condition, lat, lon } = req.query;
     
-    let filtered = products.filter(p => !p.sold); // Hanya tampilkan yang belum terjual
+    let filtered = products.filter(p => !p.sold);
     
     if (search) {
       filtered = filtered.filter(p => (p.title && p.title.toLowerCase().includes(search.toLowerCase())) || (p.brand && p.brand.toLowerCase().includes(search.toLowerCase())));
@@ -92,11 +92,31 @@ app.get('/', (req, res) => {
     if (condition && condition !== 'Semua') {
       filtered = filtered.filter(p => p.condition === condition);
     }
-    if (location && location !== 'Semua') {
-      filtered = filtered.filter(p => p.location && p.location.toLowerCase().includes(location.toLowerCase()));
+
+    // Urutkan berdasarkan kedekatan koordinat jika tersedia, atau ID terbaru
+    const userLat = lat ? parseFloat(lat) : null;
+    const userLon = lon ? parseFloat(lon) : null;
+
+    filtered.forEach(p => {
+      // Dummy koordinat center wilayah jika produk tidak punya koordinat khusus (misal default Cisarua -6.69, 106.94)
+      p._lat = p.lat || -6.6912;
+      p._lon = p.lon || 106.9421;
+      
+      if (userLat && userLon) {
+        // Hitung jarak sederhana (Haversine formula ringkas)
+        const dLat = p._lat - userLat;
+        const dLon = p._lon - userLon;
+        p._distance = Math.sqrt(dLat * dLat + dLon * dLon);
+      } else {
+        p._distance = 0;
+      }
+    });
+
+    if (userLat && userLon) {
+      filtered.sort((a, b) => a._distance - b._distance);
+    } else {
+      filtered.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
     }
-    
-    filtered.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
     
     return res.render('index', {
       products: filtered,
@@ -104,8 +124,8 @@ app.get('/', (req, res) => {
       selectedCategory: category || 'Semua',
       selectedBrand: brand || 'Semua',
       selectedCondition: condition || 'Semua',
-      selectedLocation: location || 'Semua',
-      locations: INDONESIA_LOCATIONS,
+      userLat: userLat || '',
+      userLon: userLon || '',
       brandsMap: BRANDS_BY_CATEGORY,
       user: req.user || null
     });
@@ -177,7 +197,7 @@ app.post('/sell', (req, res) => {
     const category = req.body.category || 'Elektronik & Gadget';
     const brand = req.body.brand || 'Lainnya';
     const condition = req.body.condition || 'Bekas';
-    const damagePercent = condition === 'Bekas' ? (req.body.damage_percent || '10% (Mulus)') : '0% (Baru)';
+    const damagePercent = condition === 'Bekas' ? (req.body.damage_percent || '90%') : '100%';
     const location = req.body.location || req.user.location || 'Cisarua, Bogor, Jawa Barat';
     const whatsapp = req.body.whatsapp || req.user.phone || '';
     const description = req.body.description || '';
@@ -209,7 +229,7 @@ app.post('/sell', (req, res) => {
       whatsapp: String(whatsapp).trim(),
       description: String(description).trim(),
       images: images,
-      image: images[0], // fallback utama
+      image: images[0],
       seller_email: req.user.email,
       seller_name: req.user.name,
       sold: false,
@@ -242,7 +262,7 @@ app.post('/profile/sold/:id', (req, res) => {
     const targetId = String(req.params.id);
     const prod = products.find(p => String(p.id) === targetId && p.seller_email.toLowerCase() === req.user.email.toLowerCase());
     if (prod) {
-      prod.sold = !prod.sold; // Toggle status terjual
+      prod.sold = !prod.sold;
       writeData(datafile, products);
     }
   } catch (e) {}
