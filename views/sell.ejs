@@ -66,53 +66,17 @@
                     </div>
                 </div>
 
-                <!-- PENGISIAN LOKASI RESMI (BERTINGKAT PROVINSI, KAB/KOTA, KECAMATAN) -->
-                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
-                    <label class="block text-emerald-900 font-black text-xs">Pilih Wilayah Resmi Indonesia *</label>
-                    
-                    <div>
-                        <span class="text-[10px] font-bold text-gray-600 block mb-1">1. Provinsi</span>
-                        <select id="provinsiSelect" onchange="loadKabupaten()" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none">
-                            <option value="">-- Pilih Provinsi --</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <span class="text-[10px] font-bold text-gray-600 block mb-1">2. Kabupaten / Kota</span>
-                        <select id="kabupatenSelect" onchange="loadKecamatan()" disabled class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none disabled:bg-gray-100">
-                            <option value="">-- Pilih Kabupaten / Kota --</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <span class="text-[10px] font-bold text-gray-600 block mb-1">3. Kecamatan</span>
-                        <select id="kecamatanSelect" onchange="setFinalLocation()" disabled class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none disabled:bg-gray-100">
-                            <option value="">-- Pilih Kecamatan --</option>
-                        </select>
-                    </div>
-
-                    <!-- Input Hidden Lokasi Final yang tersimpan ke Database -->
-                    <input type="hidden" id="locationFinal" name="location" required>
-                    <p class="text-[11px] text-emerald-700 font-bold mt-1" id="selectedLocationText">Lokasi terpilih: Belum dipilih</p>
+                <!-- PENCARIAN LOKASI RESMI KEC, KAB/KOTA, PROV SELURUH INDONESIA -->
+                <div class="relative">
+                    <label class="block text-emerald-900 font-black text-xs mb-1">Lokasi (Kecamatan, Kabupaten/Kota, Provinsi) *</label>
+                    <input type="text" id="locationInput" name="location" required autocomplete="off" placeholder="Ketik kecamatan atau kota (misal: Cisarua)..." oninput="searchLocation(this.value)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none">
+                    <div id="locationDropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-xl mt-1 max-h-48 overflow-y-auto z-20 hidden shadow-lg"></div>
+                    <p class="text-[10px] text-gray-500 mt-1">Ketik minimal 2 huruf untuk memunculkan pilihan wilayah resmi seluruh Indonesia.</p>
                 </div>
 
-                <!-- TITIK KOORDINAT MANUAL ATAU OTOMATIS GPS -->
-                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
-                    <div class="flex justify-between items-center">
-                        <label class="block text-emerald-900 font-black text-xs">Titik Koordinat (Opsional / Manual)</label>
-                        <button type="button" onclick="getGPSLocation()" class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded-lg text-[10px] hover:bg-emerald-200 transition">Gunakan GPS Saya</button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <span class="text-[10px] font-bold text-gray-600 block mb-1">Latitude</span>
-                            <input type="text" id="latInput" name="lat" placeholder="-6.6912" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none">
-                        </div>
-                        <div>
-                            <span class="text-[10px] font-bold text-gray-600 block mb-1">Longitude</span>
-                            <input type="text" id="lonInput" name="lon" placeholder="106.9421" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none">
-                        </div>
-                    </div>
-                </div>
+                <!-- Input tersembunyi untuk koordinat agar backend tetap kompatibel tanpa error -->
+                <input type="hidden" id="latInput" name="lat" value="-6.6912">
+                <input type="hidden" id="lonInput" name="lon" value="106.9421">
 
                 <div>
                     <label class="block text-gray-700 font-bold text-xs mb-1">Upload Foto / Gambar (Maksimal 10 Foto) *</label>
@@ -160,104 +124,51 @@
             input.value = value;
         }
 
-        // INTEGRASI API RESMI WILAYAH INDONESIA (EMSifa / Kemendagri Public API)
-        const API_BASE = "https://emsifa.github.io/api-wilayah-indonesia/api";
-
-        async function loadProvinsi() {
-            try {
-                const res = await fetch(`${API_BASE}/provinces.json`);
-                const provinces = await res.json();
-                const sel = document.getElementById('provinsiSelect');
-                provinces.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = p.name;
-                    sel.appendChild(opt);
-                });
-            } catch (e) {
-                console.error("Gagal memuat data provinsi resmi");
+        let searchTimeout = null;
+        async function searchLocation(query) {
+            const dropdown = document.getElementById('locationDropdown');
+            if (!query || query.length < 2) {
+                dropdown.classList.add('hidden');
+                return;
             }
-        }
-        loadProvinsi();
 
-        async function loadKabupaten() {
-            const provId = document.getElementById('provinsiSelect').value;
-            const kabSel = document.getElementById('kabupatenSelect');
-            const kecSel = document.getElementById('kecamatanSelect');
-            
-            kabSel.innerHTML = '<option value="">-- Pilih Kabupaten / Kota --</option>';
-            kecSel.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
-            kabSel.disabled = !provId;
-            kecSel.disabled = true;
-
-            if (!provId) return;
-
-            try {
-                const res = await fetch(`${API_BASE}/regencies/${provId}.json`);
-                const regencies = await res.json();
-                regencies.forEach(r => {
-                    const opt = document.createElement('option');
-                    opt.value = r.id;
-                    opt.textContent = r.name;
-                    kabSel.appendChild(opt);
-                });
-            } catch (e) {}
-            setFinalLocation();
-        }
-
-        async function loadKecamatan() {
-            const kabId = document.getElementById('kabupatenSelect').value;
-            const kecSel = document.getElementById('kecamatanSelect');
-            
-            kecSel.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
-            kecSel.disabled = !kabId;
-
-            if (!kabId) return;
-
-            try {
-                const res = await fetch(`${API_BASE}/districts/${kabId}.json`);
-                const districts = await res.json();
-                districts.forEach(d => {
-                    const opt = document.createElement('option');
-                    opt.value = d.id;
-                    opt.textContent = d.name;
-                    kecSel.appendChild(opt);
-                });
-            } catch (e) {}
-            setFinalLocation();
-        }
-
-        function setFinalLocation() {
-            const provOpt = document.getElementById('provinsiSelect').selectedOptions[0];
-            const kabOpt = document.getElementById('kabupatenSelect').selectedOptions[0];
-            const kecOpt = document.getElementById('kecamatanSelect').selectedOptions[0];
-
-            let parts = [];
-            if (kecOpt && kecOpt.value) parts.push(kecOpt.textContent);
-            if (kabOpt && kabOpt.value) parts.push(kabOpt.textContent);
-            if (provOpt && provOpt.value) parts.push(provOpt.textContent);
-
-            const resultStr = parts.join(', ');
-            document.getElementById('locationFinal').value = resultStr;
-            document.getElementById('selectedLocationText').textContent = "Lokasi terpilih: " + (resultStr || "Belum dipilih");
-        }
-
-        function getGPSLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        document.getElementById('latInput').value = pos.coords.latitude;
-                        document.getElementById('lonInput').value = pos.coords.longitude;
-                        alert("Titik koordinat GPS berhasil dimuat!");
-                    },
-                    (err) => {
-                        alert("Gagal mendeteksi GPS. Silakan isi koordinat secara manual.");
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Indonesia")}&countrycodes=id&limit=10`);
+                    const data = await res.json();
+                    
+                    dropdown.innerHTML = '';
+                    if (data && data.length > 0) {
+                        data.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'px-4 py-2.5 text-xs hover:bg-emerald-50 cursor-pointer font-medium text-gray-700 border-b border-gray-100 last:border-b-0';
+                            div.textContent = item.display_name;
+                            div.onclick = function() {
+                                document.getElementById('locationInput').value = item.display_name;
+                                if (item.lat && item.lon) {
+                                    document.getElementById('latInput').value = item.lat;
+                                    document.getElementById('lonInput').value = item.lon;
+                                }
+                                dropdown.classList.add('hidden');
+                            };
+                            dropdown.appendChild(div);
+                        });
+                        dropdown.classList.remove('hidden');
+                    } else {
+                        dropdown.classList.add('hidden');
                     }
-                );
-            } else {
-                alert("Geolocation tidak didukung oleh browser Anda.");
-            }
+                } catch (e) {
+                    dropdown.classList.add('hidden');
+                }
+            }, 300);
         }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#locationInput') && !e.target.closest('#locationDropdown')) {
+                document.getElementById('locationDropdown').classList.add('hidden');
+            }
+        });
 
         function handleFiles(input) {
             const container = document.getElementById('previewContainer');
