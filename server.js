@@ -32,7 +32,6 @@ function writeData(filePath, data) {
   } catch (e) {}
 }
 
-// Middleware Sesi Pengguna Anti-Crash
 app.use((req, res, next) => {
   try {
     const email = req.cookies.user_email;
@@ -49,7 +48,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// 1. Beranda
 app.get('/', (req, res) => {
   try {
     const products = readData(datafile);
@@ -85,21 +83,22 @@ app.get('/', (req, res) => {
   }
 });
 
-// 2. Halaman Login
-app.get('/login', (req, res) => {
-  if (req.user) return res.redirect('/profile');
-  return res.render('login', { user: null, currentUser: null });
-});
-
-// 3. Login Facebook & Universal (Anti-Error / Anti-Crash)
+// Penanganan Universal GET & POST untuk Login (Mendukung Facebook / Dummy / Manual)
 app.all('/login', (req, res) => {
   try {
+    // Jika diakses via GET murni tanpa parameter login dan belum punya sesi, tampilkan halaman login
+    if (req.method === 'GET' && !req.query.email && !req.query.name && !req.query.provider) {
+      if (req.user) return res.redirect('/profile');
+      return res.render('login', { user: null, currentUser: null });
+    }
+
     let email = req.body.email || req.query.email;
     let name = req.body.name || req.query.name;
     let provider = req.body.provider || req.query.provider || 'facebook';
 
     if (!email) {
-      email = `fb_user_${Math.floor(Math.random() * 90000) + 10000}@facebook.com`;
+      const randomId = Math.floor(Math.random() * 90000) + 10000;
+      email = `fb_user_${randomId}@facebook.com`;
     }
     if (!name) {
       name = 'Pengguna Facebook';
@@ -133,7 +132,6 @@ app.all('/login', (req, res) => {
   }
 });
 
-// 4. Detail Produk (Lengkap dengan data seller agar product.ejs tidak error)
 app.get('/product/:id', (req, res) => {
   try {
     const products = readData(datafile);
@@ -141,10 +139,9 @@ app.get('/product/:id', (req, res) => {
     const product = products.find(p => String(p.id || '').trim() === targetId);
     
     if (!product) {
-      return res.status(404).send('Maaf, detail produk tidak ditemukan atau ID tidak valid.');
+      return res.status(404).send('Maaf, detail produk tidak ditemukan.');
     }
     
-    // Cari data penjual berdasarkan seller_email produk
     const users = readData(usersFile);
     const seller = users.find(u => u.email && product.seller_email && u.email.toLowerCase() === product.seller_email.toLowerCase()) || {
       name: product.seller_name || 'Penjual',
@@ -164,7 +161,6 @@ app.get('/product/:id', (req, res) => {
   }
 });
 
-// 5. Terbitkan Iklan / Sell (GET & POST Aman)
 app.get('/sell', (req, res) => {
   if (!req.user) return res.redirect('/login');
   return res.render('sell', { user: req.user, currentUser: req.user });
@@ -176,7 +172,6 @@ app.post('/sell', (req, res) => {
     
     const { title, price, category, condition, location, description, image } = req.body;
     const products = readData(datafile);
-    
     const lastId = products.length > 0 ? (Number(products[products.length - 1].id) || products.length) : 0;
     
     const newProduct = {
@@ -202,7 +197,6 @@ app.post('/sell', (req, res) => {
   }
 });
 
-// 6. Profil (Lengkap dengan currentUser agar profile.ejs tidak error)
 app.get('/profile', (req, res) => {
   if (!req.user) return res.redirect('/login');
   try {
@@ -211,13 +205,15 @@ app.get('/profile', (req, res) => {
     return res.render('profile', { 
       user: req.user, 
       currentUser: req.user, 
-      products: myProducts 
+      products: myProducts,
+      myProducts: myProducts 
     });
   } catch (e) {
     return res.render('profile', { 
       user: req.user, 
       currentUser: req.user, 
-      products: [] 
+      products: [],
+      myProducts: [] 
     });
   }
 });
@@ -237,7 +233,6 @@ app.post('/profile', (req, res) => {
   return res.redirect('/profile');
 });
 
-// 7. Logout
 app.get('/logout', (req, res) => {
   res.clearCookie('user_email');
   return res.redirect('/login');
