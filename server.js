@@ -6,6 +6,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.disable('x-powered-by');
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
@@ -18,23 +19,26 @@ const usersFile = path.join(__dirname, 'users.json');
 function readData(filePath) {
   if (!fs.existsSync(filePath)) return [];
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const raw = fs.readFileSync(filePath, 'utf8');
+    return raw ? JSON.parse(raw) : [];
   } catch (e) {
     return [];
   }
 }
 
 function writeData(filePath, data) {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  } catch (e) {}
 }
 
-// Middleware User Aktif yang Aman
+// Middleware Sesi Pengguna Anti-Crash
 app.use((req, res, next) => {
   try {
     const email = req.cookies.user_email;
     if (email) {
       const users = readData(usersFile);
-      const foundUser = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+      const foundUser = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase().trim());
       if (foundUser) {
         req.user = foundUser;
       }
@@ -47,61 +51,63 @@ app.use((req, res, next) => {
 
 // 1. Beranda
 app.get('/', (req, res) => {
-  const products = readData(datafile);
-  const { search, category, condition, location } = req.query;
-  
-  let filtered = products;
-  if (search) {
-    filtered = filtered.filter(p => p.title && p.title.toLowerCase().includes(search.toLowerCase()));
+  try {
+    const products = readData(datafile);
+    const { search, category, condition, location } = req.query;
+    
+    let filtered = products;
+    if (search) {
+      filtered = filtered.filter(p => p.title && p.title.toLowerCase().includes(search.toLowerCase()));
+    }
+    if (category && category !== 'Semua') {
+      filtered = filtered.filter(p => p.category === category);
+    }
+    if (condition && condition !== 'Semua') {
+      filtered = filtered.filter(p => p.condition === condition);
+    }
+    if (location && location !== 'Semua') {
+      filtered = filtered.filter(p => p.location && p.location.toLowerCase().includes(location.toLowerCase()));
+    }
+    
+    filtered.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+    
+    return res.render('index', {
+      products: filtered,
+      search: search || '',
+      selectedCategory: category || 'Semua',
+      selectedCondition: condition || 'Semua',
+      selectedLocation: location || 'Semua',
+      user: req.user || null,
+      currentUser: req.user || null
+    });
+  } catch (e) {
+    return res.status(500).send("Terjadi kesalahan pada server beranda.");
   }
-  if (category && category !== 'Semua') {
-    filtered = filtered.filter(p => p.category === category);
-  }
-  if (condition && condition !== 'Semua') {
-    filtered = filtered.filter(p => p.condition === condition);
-  }
-  if (location && location !== 'Semua') {
-    filtered = filtered.filter(p => p.location && p.location.toLowerCase().includes(location.toLowerCase()));
-  }
-  
-  filtered.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
-  
-  res.render('index', {
-    products: filtered,
-    search: search || '',
-    selectedCategory: category || 'Semua',
-    selectedCondition: condition || 'Semua',
-    selectedLocation: location || 'Semua',
-    user: req.user || null
-  });
 });
 
-// 2. Halaman Login Form
+// 2. Halaman Login
 app.get('/login', (req, res) => {
   if (req.user) return res.redirect('/profile');
-  res.render('login', { user: req.user || null });
+  return res.render('login', { user: null, currentUser: null });
 });
 
-// 3. PENGATURAN LOGIN & FACEBOOK (100% Anti-Error & Universal Handle)
+// 3. Login Facebook & Universal (Anti-Error / Anti-Crash)
 app.all('/login', (req, res) => {
   try {
     let email = req.body.email || req.query.email;
     let name = req.body.name || req.query.name;
     let provider = req.body.provider || req.query.provider || 'facebook';
 
-    // Jika diakses tanpa parameter (misal klik tombol login facebook polos), generate otomatis identitas aman
     if (!email) {
       email = `fb_user_${Math.floor(Math.random() * 90000) + 10000}@facebook.com`;
     }
     if (!name) {
-      name = provider === 'facebook' ? 'Pengguna Facebook' : email.split('@')[0];
+      name = 'Pengguna Facebook';
     }
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = name.trim();
-    const autoAvatar = provider === 'facebook'
-      ? 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f65'
-      : 'https://images.unsplash.com/photo-1534528741775-53994a69dae8';
+    const autoAvatar = 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f65';
 
     let users = readData(usersFile);
     let user = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
@@ -120,106 +126,123 @@ app.all('/login', (req, res) => {
       writeData(usersFile, users);
     }
 
-    // Set Cookie Masa Berlaku 30 Hari
-    res.cookie('user_email', cleanEmail, { maxAge: 30 * 24 * 60 * 60 * 1000 });
-    res.cookie('user_name', user.name, { maxAge: 30 * 24 * 60 * 60 * 1000 });
-    res.cookie('user_provider', provider, { maxAge: 30 * 24 * 60 * 60 * 1000 });
-    res.cookie('user_avatar', user.avatar, { maxAge: 30 * 24 * 60 * 60 * 1000 });
-
+    res.cookie('user_email', cleanEmail, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
     return res.redirect('/profile');
   } catch (err) {
-    console.error("Critical Login Error Handled:", err);
     return res.redirect('/');
   }
 });
 
-// 4. Detail Produk Aman
+// 4. Detail Produk (Lengkap dengan data seller agar product.ejs tidak error)
 app.get('/product/:id', (req, res) => {
   try {
     const products = readData(datafile);
-    const targetId = String(req.params.id).trim();
-    const product = products.find(p => String(p.id).trim() === targetId);
+    const targetId = String(req.params.id || '').trim();
+    const product = products.find(p => String(p.id || '').trim() === targetId);
     
     if (!product) {
-      return res.status(404).render('index', { 
-        products: products, 
-        search: '', 
-        selectedCategory: 'Semua', 
-        selectedCondition: 'Semua', 
-        selectedLocation: 'Semua', 
-        user: req.user || null 
-      });
+      return res.status(404).send('Maaf, detail produk tidak ditemukan atau ID tidak valid.');
     }
     
-    res.render('product', { product, user: req.user || null });
+    // Cari data penjual berdasarkan seller_email produk
+    const users = readData(usersFile);
+    const seller = users.find(u => u.email && product.seller_email && u.email.toLowerCase() === product.seller_email.toLowerCase()) || {
+      name: product.seller_name || 'Penjual',
+      email: product.seller_email || '',
+      phone: product.seller_phone || '',
+      avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f65'
+    };
+    
+    return res.render('product', { 
+      product, 
+      seller, 
+      user: req.user || null,
+      currentUser: req.user || null 
+    });
   } catch (e) {
-    res.redirect('/');
+    return res.redirect('/');
   }
 });
 
-// 5. Jual Barang (Sell)
+// 5. Terbitkan Iklan / Sell (GET & POST Aman)
 app.get('/sell', (req, res) => {
   if (!req.user) return res.redirect('/login');
-  res.render('sell', { user: req.user });
+  return res.render('sell', { user: req.user, currentUser: req.user });
 });
 
 app.post('/sell', (req, res) => {
-  if (!req.user) return res.redirect('/login');
-  const { title, price, category, condition, location, description, image } = req.body;
-  const products = readData(datafile);
-  
-  const lastId = products.length > 0 ? Number(products[products.length - 1].id) || products.length : 0;
-  
-  const newProduct = {
-    id: lastId + 1,
-    title: title || 'Tanpa Judul',
-    price: Number(price) || 0,
-    category: category || 'Lainnya',
-    condition: condition || 'Bekas',
-    location: location || 'Indonesia',
-    description: description || '',
-    image: image || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
-    seller_email: req.user.email,
-    seller_name: req.user.name,
-    seller_phone: req.user.phone || '',
-    created_at: new Date().toLocaleDateString('id-ID')
-  };
+  try {
+    if (!req.user) return res.redirect('/login');
+    
+    const { title, price, category, condition, location, description, image } = req.body;
+    const products = readData(datafile);
+    
+    const lastId = products.length > 0 ? (Number(products[products.length - 1].id) || products.length) : 0;
+    
+    const newProduct = {
+      id: lastId + 1,
+      title: title ? title.trim() : 'Tanpa Judul',
+      price: Number(price) || 0,
+      category: category || 'Lainnya',
+      condition: condition || 'Bekas',
+      location: location || 'Indonesia',
+      description: description ? description.trim() : '',
+      image: image ? image.trim() : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
+      seller_email: req.user.email,
+      seller_name: req.user.name,
+      seller_phone: req.user.phone || '',
+      created_at: new Date().toLocaleDateString('id-ID')
+    };
 
-  products.push(newProduct);
-  writeData(datafile, products);
-  res.redirect('/');
+    products.push(newProduct);
+    writeData(datafile, products);
+    return res.redirect('/');
+  } catch (e) {
+    return res.redirect('/sell');
+  }
 });
 
-// 6. Profil Pengguna
+// 6. Profil (Lengkap dengan currentUser agar profile.ejs tidak error)
 app.get('/profile', (req, res) => {
   if (!req.user) return res.redirect('/login');
-  const products = readData(datafile);
-  const myProducts = products.filter(p => p.seller_email && req.user.email && p.seller_email.toLowerCase() === req.user.email.toLowerCase());
-  res.render('profile', { user: req.user, products: myProducts });
+  try {
+    const products = readData(datafile);
+    const myProducts = products.filter(p => p.seller_email && req.user.email && p.seller_email.toLowerCase() === req.user.email.toLowerCase());
+    return res.render('profile', { 
+      user: req.user, 
+      currentUser: req.user, 
+      products: myProducts 
+    });
+  } catch (e) {
+    return res.render('profile', { 
+      user: req.user, 
+      currentUser: req.user, 
+      products: [] 
+    });
+  }
 });
 
 app.post('/profile', (req, res) => {
   if (!req.user) return res.redirect('/login');
-  let users = readData(usersFile);
-  let index = users.findIndex(u => u.email && req.user.email && u.email.toLowerCase() === req.user.email.toLowerCase());
-  if (index !== -1) {
-    users[index].name = req.body.name || users[index].name;
-    users[index].phone = req.body.phone || users[index].phone;
-    users[index].location = req.body.location || users[index].location;
-    writeData(usersFile, users);
-  }
-  res.redirect('/profile');
+  try {
+    let users = readData(usersFile);
+    let index = users.findIndex(u => u.email && req.user.email && u.email.toLowerCase() === req.user.email.toLowerCase());
+    if (index !== -1) {
+      users[index].name = req.body.name ? req.body.name.trim() : users[index].name;
+      users[index].phone = req.body.phone ? req.body.phone.trim() : users[index].phone;
+      users[index].location = req.body.location ? req.body.location.trim() : users[index].location;
+      writeData(usersFile, users);
+    }
+  } catch (e) {}
+  return res.redirect('/profile');
 });
 
-// 7. Keluar (Logout)
+// 7. Logout
 app.get('/logout', (req, res) => {
   res.clearCookie('user_email');
-  res.clearCookie('user_name');
-  res.clearCookie('user_provider');
-  res.clearCookie('user_avatar');
-  res.redirect('/login');
+  return res.redirect('/login');
 });
 
 app.listen(PORT, () => {
-  console.log(`LAPAKBEKAS.ID Berjalan Sempurna di http://localhost:${PORT}`);
+  console.log(`Server aktif di port ${PORT}`);
 });
