@@ -28,6 +28,7 @@ function writeData(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
+// Global User Middleware
 app.use((req, res, next) => {
   const email = req.cookies.user_email;
   if (email) {
@@ -44,6 +45,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// 1. Home Route
 app.get('/', (req, res) => {
   const products = readData(datafile);
   const { search, category, condition, location } = req.query;
@@ -74,11 +76,13 @@ app.get('/', (req, res) => {
   });
 });
 
+// 2. Login Page
 app.get('/login', (req, res) => {
   if (req.user) return res.redirect('/profile');
   res.render('login', { user: req.user || null });
 });
 
+// 3. Login Handler (Google & Facebook Mock/Direct)
 app.post('/login', (req, res) => {
   let { email, name, provider } = req.body;
   if (!email) return res.redirect('/login');
@@ -123,38 +127,15 @@ app.post('/login', (req, res) => {
   res.redirect('/profile');
 });
 
-app.get('/profile', (req, res) => {
-  if (!req.user) return res.redirect('/login');
+// 4. Product Detail Route
+app.get('/product/:id', (req, res) => {
   const products = readData(datafile);
-  const myProducts = products.filter(p => p.seller_email === req.user.email);
-  res.render('profile', { user: req.user, products: myProducts });
+  const product = products.find(p => p.id == req.params.id);
+  if (!product) return res.status(404).send('Produk tidak ditemukan');
+  res.render('product', { product, user: req.user || null });
 });
 
-app.post('/profile', (req, res) => {
-  if (!req.user) return res.redirect('/login');
-  let users = readData(usersFile);
-  let index = users.findIndex(u => u.email === req.user.email);
-  if (index !== -1) {
-    users[index].name = req.body.name || users[index].name;
-    users[index].phone = req.body.phone || users[index].phone;
-    users[index].location = req.body.location || users[index].location;
-    writeData(usersFile, users);
-  }
-  res.redirect('/profile');
-});
-
-app.get('/logout', (req, res) => {
-  res.clearCookie('user_email');
-  res.clearCookie('user_name');
-  res.clearCookie('user_provider');
-  res.clearCookie('user_avatar');
-  res.redirect('/login');
-});
-
-app.listen(PORT, () => {
-  console.log(`LAPAKBEKAS.ID Aktif di http://localhost:${PORT}`);
-});
-
+// 5. Sell Route (Get & Post)
 app.get('/sell', (req, res) => {
   if (!req.user) return res.redirect('/login');
   res.render('sell', { user: req.user });
@@ -185,9 +166,36 @@ app.post('/sell', (req, res) => {
   res.redirect('/');
 });
 
-app.get('/product/:id', (req, res) => {
+// 6. Profile Route (Get & Post)
+app.get('/profile', (req, res) => {
+  if (!req.user) return res.redirect('/login');
   const products = readData(datafile);
-  const product = products.find(p => p.id == req.params.id);
-  if (!product) return res.status(404).send('Produk tidak ditemukan');
-  res.render('product', { product, user: req.user || null });
+  const myProducts = products.filter(p => p.seller_email === req.user.email);
+  res.render('profile', { user: req.user, products: myProducts });
+});
+
+app.post('/profile', (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  let users = readData(usersFile);
+  let index = users.findIndex(u => u.email === req.user.email);
+  if (index !== -1) {
+    users[index].name = req.body.name || users[index].name;
+    users[index].phone = req.body.phone || users[index].phone;
+    users[index].location = req.body.location || users[index].location;
+    writeData(usersFile, users);
+  }
+  res.redirect('/profile');
+});
+
+// 7. Logout Route
+app.get('/logout', (req, res) => {
+  res.clearCookie('user_email');
+  res.clearCookie('user_name');
+  res.clearCookie('user_provider');
+  res.clearCookie('user_avatar');
+  res.redirect('/login');
+});
+
+app.listen(PORT, () => {
+  console.log(`LAPAKBEKAS.ID Aktif di http://localhost:${PORT}`);
 });
