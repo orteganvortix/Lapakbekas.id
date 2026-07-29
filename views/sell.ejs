@@ -3,57 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pasang Iklan - LapakBekas</title>
+    <title>Pasang Iklan - LapakBekas.id</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-50 min-h-screen">
     <div class="max-w-xl mx-auto py-8 px-4">
-        <div class="bg-white rounded-xl shadow-md p-6">
-            <h1 class="text-2xl font-bold text-gray-800 mb-6">Pasang Iklan Baru</h1>
+        <div class="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
+            <h1 class="text-2xl font-black text-emerald-900 mb-6">Pasang Iklan Baru</h1>
             <form action="/sell" method="POST" class="space-y-4">
                 <div>
-                    <label class="block text-gray-700 font-medium mb-1">Judul Barang</label>
-                    <input type="text" name="title" required placeholder="Contoh: Honda Vario 150 Bekas" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <label class="block text-gray-700 font-semibold text-sm mb-1">Barang yang Dijual <span class="text-red-500">*</span></label>
+                    <input type="text" name="title" required placeholder="Contoh: Honda Vario 150 CBS ISS" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
+
                 <div>
-                    <label class="block text-gray-700 font-medium mb-1">Harga (Rp)</label>
-                    <input type="number" name="price" required placeholder="Contoh: 12500000" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <label class="block text-gray-700 font-semibold text-sm mb-1">Harga (Rp) <span class="text-red-500">*</span></label>
+                    <input type="text" id="priceInput" name="price" required placeholder="Contoh: 15.000.000" oninput="formatRupiah(this)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
+
                 <div>
-                    <label class="block text-gray-700 font-medium mb-1">Kategori</label>
-                    <select name="category" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                        <option value="Elektronik">Elektronik</option>
+                    <label class="block text-gray-700 font-semibold text-sm mb-1">Kategori <span class="text-red-500">*</span></label>
+                    <select name="category" id="categorySelect" onchange="updateBrands()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="Elektronik & Gadget">Elektronik & Gadget</option>
                         <option value="Kendaraan">Kendaraan</option>
-                        <option value="Properti">Properti</option>
-                        <option value="Fashion">Fashion</option>
-                        <option value="Lainnya">Lainnya</option>
+                        <option value="Perabotan Rumah">Perabotan Rumah</option>
+                        <option value="Hobi & Lainnya">Hobi & Lainnya</option>
                     </select>
                 </div>
+
                 <div>
-                    <label class="block text-gray-700 font-medium mb-1">Kondisi</label>
-                    <select name="condition" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                        <option value="Bekas">Bekas</option>
-                        <option value="Baru">Baru</option>
+                    <label class="block text-gray-700 font-semibold text-sm mb-1">Merk / Type <span class="text-red-500">*</span></label>
+                    <select name="brand" id="brandSelect" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <!-- Otomatis sesuai kategori -->
                     </select>
                 </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-1">Lokasi</label>
-                    <input type="text" name="location" placeholder="Contoh: Jakarta / Bekasi" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-semibold text-sm mb-1">Kondisi <span class="text-red-500">*</span></label>
+                        <select name="condition" id="conditionSelect" onchange="toggleDamage()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="Bekas">Bekas</option>
+                            <option value="Baru">Baru</option>
+                        </select>
+                    </div>
+                    <div id="damageContainer">
+                        <label class="block text-gray-700 font-semibold text-sm mb-1">Persentase Kerusakan / Mulus <span class="text-red-500">*</span></label>
+                        <select name="damage_percent" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="95% Mulus (Minim Pemakaian)">95% Mulus (Minim Pemakaian)</option>
+                            <option value="90% Mulus">90% Mulus</option>
+                            <option value="85% Normal">85% Normal</option>
+                            <option value="80% Layak Pakai">80% Layak Pakai</option>
+                            <option value="75% Minus Pemakaian">75% Minus Pemakaian</option>
+                            <option value="50% Rusak / Kanibal">50% Rusak / Kanibal</option>
+                        </select>
+                    </div>
                 </div>
+
                 <div>
-                    <label class="block text-gray-700 font-medium mb-1">Link URL Foto / Gambar</label>
-                    <input type="text" name="image" placeholder="https://images.unsplash.com/..." class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <label class="block text-gray-700 font-semibold text-sm mb-1">Lokasi (Kec, Kab/Kota) <span class="text-red-500">*</span></label>
+                    <select name="location" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <% locations.forEach(loc => { %>
+                            <option value="<%= loc %>"><%= loc %></option>
+                        <% }) %>
+                    </select>
                 </div>
+
                 <div>
-                    <label class="block text-gray-700 font-medium mb-1">Deskripsi</label>
-                    <textarea name="description" rows="4" placeholder="Jelaskan detail barang dagangan Anda..." class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                    <label class="block text-gray-700 font-semibold text-sm mb-1">Upload Foto / Gambar dari Galeri <span class="text-red-500">*</span></label>
+                    <input type="file" id="imageFile" accept="image/*" onchange="previewImage(this)" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                    <input type="hidden" name="image_base64" id="imageBase64">
+                    <div id="imagePreviewContainer" class="mt-2 hidden">
+                        <img id="imgPreview" src="" alt="Preview" class="w-32 h-32 object-cover rounded-xl border border-gray-200 shadow-sm">
+                    </div>
                 </div>
-                <div class="flex gap-4 pt-2">
-                    <button type="submit" class="flex-1 bg-emerald-600 text-white font-semibold py-2 rounded-lg hover:bg-emerald-700 transition">Terbitkan Iklan</button>
-                    <a href="/" class="flex-1 bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-center hover:bg-gray-400 transition">Batal</a>
+
+                <div>
+                    <label class="block text-gray-700 font-semibold text-sm mb-1">Deskripsi Lengkap</label>
+                    <textarea name="description" rows="4" placeholder="Jelaskan spesifikasi dan kelengkapan barang..." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 bg-emerald-700 text-white font-bold py-3 rounded-xl hover:bg-emerald-800 transition text-sm shadow-md">Terbitkan Iklan</button>
+                    <a href="/" class="flex-1 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-center hover:bg-gray-300 transition text-sm">Batal</a>
                 </div>
             </form>
         </div>
     </div>
+
+    <script>
+        const brandsMap = <%- JSON.stringify(brandsMap) %>;
+        function updateBrands() {
+            const cat = document.getElementById('categorySelect').value;
+            const brandSel = document.getElementById('brandSelect');
+            brandSel.innerHTML = '';
+            if (brandsMap[cat]) {
+                brandsMap[cat].forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b;
+                    opt.textContent = b;
+                    brandSel.appendChild(opt);
+                });
+            }
+        }
+        updateBrands();
+
+        function toggleDamage() {
+            const cond = document.getElementById('conditionSelect').value;
+            const dmgCont = document.getElementById('damageContainer');
+            if (cond === 'Baru') {
+                dmgCont.style.display = 'none';
+            } else {
+                dmgCont.style.display = 'block';
+            }
+        }
+
+        function formatRupiah(input) {
+            let val = input.value.replace(/[^0-9]/g, '');
+            if (val) {
+                input.value = Number(val).toLocaleString('id-ID');
+            } else {
+                input.value = '';
+            }
+        }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imgPreview').src = e.target.result;
+                    document.getElementById('imageBase64').value = e.target.result;
+                    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
 </body>
 </html>

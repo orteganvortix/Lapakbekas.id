@@ -3,240 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profil Pengguna - LAPAKBEKAS.ID</title>
+    <title>Profil Saya - LapakBekas.id</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen">
-    
-    <header class="bg-emerald-600 text-white shadow-md sticky top-0 z-50">
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
         <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
-            <a href="/" class="text-xl font-black tracking-wider">
-                LAPAK<span class="text-amber-300">BEKAS</span>.ID
-            </a>
-            <a href="/" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
-                <i class="fa-solid fa-house"></i> Kembali ke Beranda
-            </a>
+            <a href="/" class="text-xl font-black text-emerald-800">LapakBekas<span class="text-emerald-500">.id</span></a>
+            <a href="/" class="text-sm font-bold text-gray-600 hover:text-emerald-700">&larr; Kembali ke Beranda</a>
         </div>
-    </header>
+    </nav>
 
-    <main class="flex-grow max-w-5xl w-full mx-auto px-4 py-6">
-        
-        <!-- Kartu Informasi Akun Utama -->
-        <div class="bg-white rounded-2xl border p-6 shadow-sm mb-6 flex flex-col md:flex-row items-center gap-5">
-            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-emerald-500 bg-emerald-50 flex items-center justify-center shadow-inner flex-shrink-0">
-                <img src="<%= currentUser.avatar %>" alt="PP" class="w-full h-full object-cover">
+    <main class="max-w-5xl mx-auto px-4 py-8 flex-1 w-full space-y-8">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col sm:flex-row items-center gap-6">
+            <img src="<%= user.avatar %>" alt="Avatar" class="w-20 h-20 rounded-full object-cover border-2 border-emerald-500 shadow-sm">
+            <div class="flex-1 text-center sm:text-left space-y-1">
+                <h1 class="text-xl font-black text-gray-800"><%= user.name %></h1>
+                <p class="text-sm text-gray-500"><%= user.email %></p>
+                <p class="text-xs text-emerald-700 font-semibold mt-1">Terhubung via Facebook Developer</p>
             </div>
-            <div class="text-center md:text-left flex-grow">
-                <h1 class="text-xl font-extrabold text-slate-800"><%= currentUser.name %></h1>
-                <p class="text-xs text-slate-500 mb-2"><%= currentUser.email %> (<span class="uppercase font-bold text-emerald-600"><%= currentUser.provider %> Auth</span>)</p>
-                <div class="flex flex-wrap justify-center md:justify-start gap-2">
-                    <span class="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-md border">
-                        <i class="fa-solid fa-circle-check"></i> Terautentikasi Gmail / FB
-                    </span>
-                    <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2.5 py-1 rounded-md">
-                        <i class="fa-solid fa-box"></i> <%= myProducts.length %> Iklan Aktif
-                    </span>
-                </div>
-            </div>
+            <a href="/logout" class="bg-red-50 text-red-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-100 transition">Keluar</a>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <!-- INFORMASI PROFIL / FORM EDIT -->
-            <div class="bg-white rounded-2xl border p-6 shadow-sm h-fit">
-                <% if (!currentUser.isProfileComplete || editMode) { %>
-                    <!-- FORM LENGKAPI / EDIT DATA DIRI -->
-                    <h2 class="text-sm font-bold text-slate-800 mb-4 pb-2 border-b flex items-center gap-2">
-                        <i class="fa-solid fa-user-pen text-emerald-600"></i> <%= currentUser.isProfileComplete ? 'Edit Data Profil' : 'Lengkapi Data Diri' %>
-                    </h2>
-                    <form action="/profile/update" method="POST" enctype="multipart/form-data" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Ganti Foto Profil (PP)</label>
-                            <input type="file" name="avatar" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:text-emerald-700">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Nama Tampilan</label>
-                            <input type="text" name="name" value="<%= currentUser.name %>" required class="w-full px-3 py-2 rounded-xl border text-xs focus:ring-2 focus:ring-emerald-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Nomor WhatsApp</label>
-                            <input type="text" name="phone" value="<%= currentUser.phone || '' %>" placeholder="628xxxxxxxxxx" required class="w-full px-3 py-2 rounded-xl border text-xs focus:ring-2 focus:ring-emerald-500">
-                        </div>
-                        
-                        <!-- Pilihan Wilayah Berjenjang Nasional -->
-                        <div class="space-y-2">
-                            <label class="block text-xs font-bold text-slate-700">Kecamatan / Wilayah Utama</label>
-                            <input type="hidden" name="location" id="fullLocation" value="<%= currentUser.location || '' %>" required>
-                            
-                            <select id="provinsi" class="w-full px-3 py-2 rounded-xl border text-xs bg-white" onchange="loadKabupaten()">
-                                <option value="">1. Pilih Provinsi...</option>
-                            </select>
-                            <select id="kabupaten" class="w-full px-3 py-2 rounded-xl border text-xs bg-white" onchange="loadKecamatan()" disabled>
-                                <option value="">2. Pilih Kabupaten/Kota...</option>
-                            </select>
-                            <select id="kecamatan" class="w-full px-3 py-2 rounded-xl border text-xs bg-white" onchange="updateFinalLocation()" disabled>
-                                <option value="">3. Pilih Kecamatan...</option>
-                            </select>
-                            <p class="text-[10px] text-emerald-600 font-medium" id="selectedPreview">Terpilih: <%= currentUser.location || 'Belum diatur' %></p>
-                        </div>
-
-                        <div class="flex gap-2 pt-2">
-                            <% if(currentUser.isProfileComplete) { %>
-                                <a href="/profile" class="w-1/2 bg-slate-100 text-slate-700 text-center py-2.5 rounded-xl text-xs font-bold">Batal</a>
-                                <button type="submit" class="w-1/2 bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-xs shadow">Simpan</button>
-                            <% } else { %>
-                                <button type="submit" class="w-full bg-slate-900 text-white font-bold py-2.5 rounded-xl text-xs shadow">Simpan & Lanjutkan</button>
-                            <% } %>
-                        </div>
-                    </form>
-                <% } else { %>
-                    <!-- TAMPILAN TERKUNCI SETELAH DISIMPAN -->
-                    <div class="flex justify-between items-center mb-4 pb-2 border-b">
-                        <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-id-card text-emerald-600"></i> Informasi Akun
-                        </h2>
-                        <!-- Tombol Edit jika ingin mengubah nomor WA atau wilayah -->
-                        <a href="/profile?edit=true" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1">
-                            <i class="fa-solid fa-pen-to-square"></i> Edit Profil
-                        </a>
-                    </div>
-                    <div class="space-y-3 text-xs">
-                        <div>
-                            <span class="text-slate-400 block text-[10px] uppercase font-bold">Nomor WhatsApp</span>
-                            <p class="font-bold text-slate-800"><%= currentUser.phone || '-' %></p>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 block text-[10px] uppercase font-bold">Wilayah Utama / Kecamatan</span>
-                            <p class="font-bold text-slate-800"><%= currentUser.location || '-' %></p>
-                        </div>
-                        <div class="bg-emerald-50 text-emerald-800 p-3 rounded-xl border border-emerald-100 mt-4">
-                            <p class="text-[11px] leading-relaxed"><i class="fa-solid fa-lock text-emerald-600 mr-1"></i> Data profil Anda sudah terverifikasi dan terkunci otomatis demi keamanan transaksi.</p>
-                        </div>
-                    </div>
-                <% } %>
-            </div>
-
-            <!-- KELOLA IKLAN SAYA -->
-            <div class="lg:col-span-2">
-                <div class="bg-white rounded-2xl border p-6 shadow-sm">
-                    <h2 class="text-sm font-bold text-slate-800 mb-4 pb-2 border-b flex justify-between items-center">
-                        <span><i class="fa-solid fa-list-check text-emerald-600"></i> Kelola Barang Iklan Saya</span>
-                        <span class="text-xs text-slate-400"><%= myProducts.length %> Iklan</span>
-                    </h2>
-
-                    <% if (myProducts.length === 0) { %>
-                        <div class="py-12 text-center">
-                            <i class="fa-solid fa-box-open text-4xl text-slate-300 mb-2"></i>
-                            <p class="text-slate-600 text-xs font-medium">Belum ada iklan.</p>
-                            <a href="/sell" class="inline-block mt-3 bg-emerald-600 text-white text-xs font-semibold px-4 py-2 rounded-xl">Pasang Iklan Sekarang</a>
-                        </div>
-                    <% } else { %>
-                        <div class="space-y-3">
-                            <% myProducts.forEach(p => { %>
-                                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border bg-slate-50">
-                                    <div class="flex items-center gap-3 overflow-hidden">
-                                        <img src="<%= p.image %>" alt="" class="w-14 h-14 object-cover rounded-xl border flex-shrink-0">
-                                        <div class="overflow-hidden">
-                                            <span class="text-[9px] text-emerald-600 font-bold uppercase"><%= p.category %></span>
-                                            <h3 class="font-bold text-slate-800 text-xs truncate"><%= p.title %></h3>
-                                            <p class="text-emerald-600 font-extrabold text-xs">Rp <%= p.price.toLocaleString('id-ID') %></p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2 flex-shrink-0">
-                                        <a href="/product/<%= p.id %>" class="bg-white border text-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold">Lihat</a>
-                                        <form action="/product/<%= p.id %>?_method=DELETE" method="POST" onsubmit="return confirm('Hapus iklan ini?');">
-                                            <button type="submit" class="bg-rose-50 text-rose-600 px-3 py-1.5 rounded-xl text-xs font-semibold">Hapus</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            <% }) %>
-                        </div>
-                    <% } %>
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h2 class="text-lg font-black text-gray-800 mb-6">Iklan Saya (<%= myProducts.length %>)</h2>
+            <% if (myProducts.length === 0) { %>
+                <div class="text-center py-12">
+                    <p class="text-gray-400 text-sm mb-4">Anda belum memasang iklan barang apapun.</p>
+                    <a href="/sell" class="bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-emerald-800 transition">+ Pasang Iklan Sekarang</a>
                 </div>
-            </div>
-
+            <% } else { %>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <% myProducts.forEach(product => { %>
+                        <div class="border border-gray-100 rounded-xl p-3 flex flex-col justify-between space-y-2">
+                            <img src="<%= product.image %>" alt="Foto" class="w-full h-32 object-cover rounded-lg">
+                            <h3 class="font-bold text-gray-800 text-sm line-clamp-1"><%= product.title %></h3>
+                            <p class="text-emerald-700 font-black text-sm">Rp <%= Number(product.price).toLocaleString('id-ID') %></p>
+                            <a href="/product/<%= product.id %>" class="bg-gray-100 text-gray-700 text-center py-1.5 rounded-lg text-xs font-bold hover:bg-gray-200 transition">Lihat Iklan</a>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } %>
         </div>
     </main>
-
-    <footer class="bg-slate-900 text-slate-400 text-xs py-6 text-center mt-auto border-t">
-        <p class="font-bold text-slate-300">LAPAKBEKAS.ID &copy; 2026</p>
-    </footer>
-
-    <!-- Script API Wilayah Nasional Berjenjang -->
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')
-                .then(response => response.json())
-                .then(provinces => {
-                    let provinsiSelect = document.getElementById('provinsi');
-                    if(provinsiSelect) {
-                        provinces.forEach(prov => {
-                            let opt = document.createElement('option');
-                            opt.value = prov.id;
-                            opt.text = prov.name;
-                            provinsiSelect.appendChild(opt);
-                        });
-                    }
-                });
-        });
-
-        function loadKabupaten() {
-            let provId = document.getElementById('provinsi').value;
-            let kabSelect = document.getElementById('kabupaten');
-            let kecSelect = document.getElementById('kecamatan');
-            
-            kabSelect.innerHTML = '<option value="">2. Pilih Kabupaten/Kota...</option>';
-            kecSelect.innerHTML = '<option value="">3. Pilih Kecamatan...</option>';
-            kabSelect.disabled = !provId;
-            kecSelect.disabled = true;
-
-            if (!provId) return;
-
-            fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${provId}.json`)
-                .then(response => response.json())
-                .then(regencies => {
-                    regencies.forEach(reg => {
-                        let opt = document.createElement('option');
-                        opt.value = reg.id;
-                        opt.text = reg.name;
-                        kabSelect.appendChild(opt);
-                    });
-                });
-        }
-
-        function loadKecamatan() {
-            let kabId = document.getElementById('kabupaten').value;
-            let kecSelect = document.getElementById('kecamatan');
-            
-            kecSelect.innerHTML = '<option value="">3. Pilih Kecamatan...</option>';
-            kecSelect.disabled = !kabId;
-
-            if (!kabId) return;
-
-            fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/districts/${kabId}.json`)
-                .then(response => response.json())
-                .then(districts => {
-                    districts.forEach(dist => {
-                        let opt = document.createElement('option');
-                        opt.value = dist.name;
-                        opt.text = dist.name;
-                        kecSelect.appendChild(opt);
-                    });
-                });
-        }
-
-        function updateFinalLocation() {
-            let provText = document.getElementById('provinsi').selectedOptions[0].text;
-            let kabText = document.getElementById('kabupaten').selectedOptions[0].text;
-            let kecText = document.getElementById('kecamatan').value;
-
-            if (kecText) {
-                let fullString = `Kec. ${kecText}, ${kabText}, ${provText}`;
-                document.getElementById('fullLocation').value = fullString;
-                document.getElementById('selectedPreview').innerText = "Terpilih: " + fullString;
-            }
-        }
-    </script>
 </body>
 </html>

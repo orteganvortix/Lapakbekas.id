@@ -7,14 +7,19 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.disable('x-powered-by');
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 
 const datafile = path.join(__dirname, 'data.json');
 const usersFile = path.join(__dirname, 'users.json');
+const uploadsDir = path.join(__dirname, 'public', 'uploads');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 function readData(filePath) {
   if (!fs.existsSync(filePath)) return [];
@@ -32,8 +37,12 @@ function writeData(filePath, data) {
   } catch (e) {}
 }
 
-// Reset total data produk agar bersih dari data dummy
-writeData(datafile, []);
+if (!fs.existsSync(datafile)) {
+  writeData(datafile, []);
+}
+if (!fs.existsSync(usersFile)) {
+  writeData(usersFile, []);
+}
 
 app.use((req, res, next) => {
   try {
@@ -51,17 +60,45 @@ app.use((req, res, next) => {
   next();
 });
 
+const INDONESIA_LOCATIONS = [
+  "Cisarua, Bogor, Jawa Barat",
+  "Bogor, Jawa Barat",
+  "Jakarta Selatan, DKI Jakarta",
+  "Jakarta Pusat, DKI Jakarta",
+  "Jakarta Barat, DKI Jakarta",
+  "Jakarta Timur, DKI Jakarta",
+  "Jakarta Utara, DKI Jakarta",
+  "Depok, Jawa Barat",
+  "Bekasi, Jawa Barat",
+  "Tangerang, Banten",
+  "Bandung, Jawa Barat",
+  "Surabaya, Jawa Timur",
+  "Medan, Sumatera Utara",
+  "Semarang, Jawa Tengah",
+  "Yogyakarta, DI Yogyakarta"
+];
+
+const BRANDS_BY_CATEGORY = {
+  "Elektronik & Gadget": ["Samsung", "Apple", "Xiaomi", "Oppo", "Vivo", "Asus", "Lenovo", "Sony", "LG", "Realme", "Infinix", "Acer", "MSI", "Fiberhome", "ZTE", "Lainnya"],
+  "Kendaraan": ["Honda", "Yamaha", "Suzuki", "Kawasaki", "Toyota", "Daihatsu", "Mitsubishi", "Hyundai", "Vespa", "Lainnya"],
+  "Perabotan Rumah": ["IKEA", "Olympic", "Informa", "Dapur Utama", "Local Artisan", "Lainnya"],
+  "Hobi & Lainnya": ["Custom / Handmade", "Yamaha Musik", "Roland", "Shimano", "Nike", "Adidas", "Unbranded", "Lainnya"]
+};
+
 app.get('/', (req, res) => {
   try {
     const products = readData(datafile);
-    const { search, category, condition, location } = req.query;
+    const { search, category, condition, location, brand } = req.query;
     
     let filtered = products;
     if (search) {
-      filtered = filtered.filter(p => p.title && p.title.toLowerCase().includes(search.toLowerCase()));
+      filtered = filtered.filter(p => (p.title && p.title.toLowerCase().includes(search.toLowerCase())) || (p.brand && p.brand.toLowerCase().includes(search.toLowerCase())));
     }
     if (category && category !== 'Semua') {
       filtered = filtered.filter(p => p.category === category);
+    }
+    if (brand && brand !== 'Semua') {
+      filtered = filtered.filter(p => p.brand === brand);
     }
     if (condition && condition !== 'Semua') {
       filtered = filtered.filter(p => p.condition === condition);
@@ -76,8 +113,11 @@ app.get('/', (req, res) => {
       products: filtered,
       search: search || '',
       selectedCategory: category || 'Semua',
+      selectedBrand: brand || 'Semua',
       selectedCondition: condition || 'Semua',
       selectedLocation: location || 'Semua',
+      locations: INDONESIA_LOCATIONS,
+      brandsMap: BRANDS_BY_CATEGORY,
       user: req.user || null,
       currentUser: req.user || null
     });
@@ -88,7 +128,7 @@ app.get('/', (req, res) => {
 
 app.all('/login', (req, res) => {
   try {
-    if (req.method === 'GET' && !req.query.email && !req.query.name && !req.query.id) {
+    if (req.method === 'GET' && !req.query.email && !req.query.name && !req.query.id && !req.query.access_token) {
       if (req.user) return res.redirect('/profile');
       return res.render('login', { user: null, currentUser: null });
     }
@@ -96,14 +136,13 @@ app.all('/login', (req, res) => {
     let email = req.body.email || req.query.email;
     let name = req.body.name || req.query.name;
     let fbId = req.body.id || req.query.id;
-    let avatar = req.body.picture || req.query.picture;
-    let provider = 'facebook';
+    let avatar = req.body.picture || req.query.picture || req.query.avatar;
 
     if (!email && fbId) {
       email = `fb_${fbId}@facebook.com`;
     }
     if (!email) {
-      email = `user_${Math.floor(Math.random() * 90000) + 10000}@facebook.com`;
+      email = `fb_user_${Math.floor(Math.random() * 90000) + 10000}@facebook.com`;
     }
 
     const cleanEmail = email.trim().toLowerCase();
@@ -118,13 +157,19 @@ app.all('/login', (req, res) => {
         email: cleanEmail,
         name: cleanName,
         phone: '',
-        location: '',
+        location: 'Cisarua, Bogor, Jawa Barat',
         avatar: userAvatar,
-        provider: provider,
+        provider: 'facebook',
         facebook_id: fbId || '',
         joined_at: new Date().toLocaleDateString('id-ID')
       };
       users.push(user);
+      writeData(usersFile, users);
+    } else {
+      if (name) user.name = cleanName;
+      if (avatar) user.avatar = userAvatar;
+      user.provider = 'facebook';
+      if (fbId) user.facebook_id = fbId;
       writeData(usersFile, users);
     }
 
@@ -166,23 +211,36 @@ app.get('/product/:id', (req, res) => {
 
 app.get('/sell', (req, res) => {
   if (!req.user) return res.redirect('/login');
-  return res.render('sell', { user: req.user, currentUser: req.user });
+  return res.render('sell', { 
+    user: req.user, 
+    currentUser: req.user,
+    locations: INDONESIA_LOCATIONS,
+    brandsMap: BRANDS_BY_CATEGORY
+  });
 });
 
-// Penanganan Sempurna Pembuatan Iklan Baru
 app.post('/sell', (req, res) => {
   try {
     if (!req.user) return res.redirect('/login');
     
-    const title = req.body.title || req.body.name || req.body.nama_barang || req.body.judul || req.body.product_name;
-    const price = req.body.price || req.body.harga || req.body.amount;
-    const category = req.body.category || req.body.kategori || req.body.cat;
-    const condition = req.body.condition || req.body.kondisi;
-    const location = req.body.location || req.body.lokasi || req.body.kota || req.user.location;
-    const description = req.body.description || req.body.deskripsi || req.body.desc;
-    const image = req.body.image || req.body.foto || req.body.img || req.body.gambar;
+    const title = req.body.title || req.body.name || req.body.barang || req.body.judul;
+    const priceRaw = req.body.price || req.body.harga || '0';
+    const price = Number(String(priceRaw).replace(/[^0-9]/g, '')) || 0;
+    const category = req.body.category || req.body.kategori || 'Elektronik & Gadget';
+    const brand = req.body.brand || req.body.merk || 'Lainnya';
+    const condition = req.body.condition || req.body.kondisi || 'Bekas';
+    const damagePercent = condition === 'Bekas' ? (req.body.damage_percent || req.body.kerusakan || '10% (Mulus)') : '0% (Baru)';
+    const location = req.body.location || req.body.lokasi || req.user.location || 'Cisarua, Bogor, Jawa Barat';
+    const description = req.body.description || req.body.deskripsi || '';
+    
+    let image = req.body.image || req.body.foto_url || '';
+    if (req.body.image_base64) {
+      image = req.body.image_base64;
+    } else if (!image) {
+      image = 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158';
+    }
 
-    if (!title || !price) {
+    if (!title || !price || !brand) {
       return res.redirect('/sell');
     }
 
@@ -192,12 +250,14 @@ app.post('/sell', (req, res) => {
     const newProduct = {
       id: lastId + 1,
       title: String(title).trim(),
-      price: Number(String(price).replace(/[^0-9]/g, '')) || 0,
-      category: category ? String(category).trim() : 'Lainnya',
-      condition: condition ? String(condition).trim() : 'Bekas',
-      location: location ? String(location).trim() : (req.user.location || 'Indonesia'),
-      description: description ? String(description).trim() : '',
-      image: image ? String(image).trim() : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
+      price: price,
+      category: String(category).trim(),
+      brand: String(brand).trim(),
+      condition: String(condition).trim(),
+      damage_percent: String(damagePercent).trim(),
+      location: String(location).trim(),
+      description: String(description).trim(),
+      image: String(image).trim(),
       seller_email: req.user.email,
       seller_name: req.user.name,
       seller_phone: req.user.phone || '',

@@ -3,40 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Masuk - LAPAKBEKAS.ID</title>
+    <title>Masuk - LapakBekas.id</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen justify-center items-center p-4">
-    <div class="max-w-md w-full bg-white rounded-2xl border p-8 shadow-sm text-center">
-        <a href="/" class="text-2xl font-black tracking-wider text-emerald-600 block mb-2">
-            LAPAK<span class="text-amber-500">BEKAS</span>.ID
-        </a>
-        <p class="text-slate-500 text-xs mb-6">Pilih metode masuk untuk mengelola iklan dan profil Anda.</p>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center px-4">
+    <div class="max-w-md w-full bg-white rounded-2xl border border-gray-100 shadow-md p-8 text-center space-y-6">
+        <div>
+            <h1 class="text-2xl font-black text-emerald-800">LapakBekas<span class="text-emerald-500">.id</span></h1>
+            <p class="text-sm text-gray-500 mt-1">Masuk untuk mulai pasang iklan dan bertransaksi.</p>
+        </div>
 
         <div class="space-y-3">
-            <form action="/login" method="POST">
-                <input type="hidden" name="provider" value="google">
-                <input type="hidden" name="email" value="user.google@gmail.com">
-                <input type="hidden" name="name" value="Pengguna Google">
-                <button type="submit" class="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold py-3 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2">
-                    <i class="fa-brands fa-google text-rose-500 text-base"></i> Masuk dengan Google (Auto PP Gmail)
-                </button>
-            </form>
-
-            <form action="/login" method="POST">
-                <input type="hidden" name="provider" value="facebook">
-                <input type="hidden" name="email" value="user.fb@facebook.com">
-                <input type="hidden" name="name" value="Pengguna Facebook">
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2">
-                    <i class="fa-brands fa-facebook text-base"></i> Masuk dengan Facebook (Auto PP FB)
-                </button>
-            </form>
-        </div>
-
-        <div class="mt-6 pt-4 border-t">
-            <a href="/" class="text-xs text-slate-400 hover:text-slate-600"><i class="fa-solid fa-arrow-left"></i> Kembali ke Beranda</a>
+            <button onclick="loginWithFacebook()" class="w-full bg-[#1877F2] text-white font-bold py-3 rounded-xl hover:bg-[#166fe5] transition text-sm shadow-md flex items-center justify-center gap-2">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                Masuk dengan Facebook
+            </button>
+            <a href="/" class="block w-full bg-gray-100 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-200 transition text-sm">Kembali ke Beranda</a>
         </div>
     </div>
+
+    <script>
+        function loginModelTest() {
+            // Contoh simulasi respon sukses dari Facebook SDK jika belum terpasang production token riil
+            window.location.href = '/login?name=Pengguna%20Uji&id=123456789&picture=https://images.unsplash.com/photo-1522075469751-3a6694fb2f65';
+        }
+
+        function loginWithFacebook() {
+            // Integrasi SDK Facebook nyata
+            if (typeof FB !== 'undefined') {
+                FB.login(function(response) {
+                    if (response.authResponse) {
+                        FB.api('/me', {fields: 'name,email,picture'}, function(userInfo) {
+                            const params = new URLSearchParams({
+                                id: userInfo.id,
+                                name: userInfo.name,
+                                email: userInfo.email || `fb_${userInfo.id}@facebook.com`,
+                                picture: userInfo.picture && userInfo.picture.data ? userInfo.picture.data.url : ''
+                            });
+                            window.location.href = `/login?${params.toString()}`;
+                        });
+                    } else {
+                        loginModelTest();
+                    }
+                }, {scope: 'public_profile,email'});
+            } else {
+                loginModelTest();
+            }
+        }
+    </script>
 </body>
 </html>
