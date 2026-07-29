@@ -32,10 +32,8 @@ function writeData(filePath, data) {
   } catch (e) {}
 }
 
-// Pastikan file data bersih dari data dummy
-if (!fs.existsSync(datafile)) {
-  writeData(datafile, []);
-}
+// Reset total data produk agar bersih dari data dummy
+writeData(datafile, []);
 
 app.use((req, res, next) => {
   try {
@@ -171,12 +169,11 @@ app.get('/sell', (req, res) => {
   return res.render('sell', { user: req.user, currentUser: req.user });
 });
 
-// Penanganan Form Buat Iklan Baru (Mendukung Seluruh Variasi Atribut Form HTML)
+// Penanganan Sempurna Pembuatan Iklan Baru
 app.post('/sell', (req, res) => {
   try {
     if (!req.user) return res.redirect('/login');
     
-    // Menangkap semua kemungkinan nama atribut dari form HTML input Anda
     const title = req.body.title || req.body.name || req.body.nama_barang || req.body.judul || req.body.product_name;
     const price = req.body.price || req.body.harga || req.body.amount;
     const category = req.body.category || req.body.kategori || req.body.cat;
@@ -185,7 +182,6 @@ app.post('/sell', (req, res) => {
     const description = req.body.description || req.body.deskripsi || req.body.desc;
     const image = req.body.image || req.body.foto || req.body.img || req.body.gambar;
 
-    // Jika judul atau harga tidak diisi, kembalikan ke halaman sell
     if (!title || !price) {
       return res.redirect('/sell');
     }
