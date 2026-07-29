@@ -32,7 +32,8 @@ function writeData(filePath, data) {
   } catch (e) {}
 }
 
-if (!fs.existsSync(datafile) || readData(datafile).some(p => p.title === 'Barang Dagangan' || p.price === 0)) {
+// Pastikan file data bersih dari data dummy
+if (!fs.existsSync(datafile)) {
   writeData(datafile, []);
 }
 
@@ -104,7 +105,7 @@ app.all('/login', (req, res) => {
       email = `fb_${fbId}@facebook.com`;
     }
     if (!email) {
-      email = `fb_user_${Math.floor(Math.random() * 90000) + 10000}@facebook.com`;
+      email = `user_${Math.floor(Math.random() * 90000) + 10000}@facebook.com`;
     }
 
     const cleanEmail = email.trim().toLowerCase();
@@ -170,10 +171,12 @@ app.get('/sell', (req, res) => {
   return res.render('sell', { user: req.user, currentUser: req.user });
 });
 
+// Penanganan Form Buat Iklan Baru (Mendukung Seluruh Variasi Atribut Form HTML)
 app.post('/sell', (req, res) => {
   try {
     if (!req.user) return res.redirect('/login');
     
+    // Menangkap semua kemungkinan nama atribut dari form HTML input Anda
     const title = req.body.title || req.body.name || req.body.nama_barang || req.body.judul || req.body.product_name;
     const price = req.body.price || req.body.harga || req.body.amount;
     const category = req.body.category || req.body.kategori || req.body.cat;
@@ -182,6 +185,7 @@ app.post('/sell', (req, res) => {
     const description = req.body.description || req.body.deskripsi || req.body.desc;
     const image = req.body.image || req.body.foto || req.body.img || req.body.gambar;
 
+    // Jika judul atau harga tidak diisi, kembalikan ke halaman sell
     if (!title || !price) {
       return res.redirect('/sell');
     }
@@ -195,7 +199,7 @@ app.post('/sell', (req, res) => {
       price: Number(String(price).replace(/[^0-9]/g, '')) || 0,
       category: category ? String(category).trim() : 'Lainnya',
       condition: condition ? String(condition).trim() : 'Bekas',
-      location: location ? String(location).trim() : 'Indonesia',
+      location: location ? String(location).trim() : (req.user.location || 'Indonesia'),
       description: description ? String(description).trim() : '',
       image: image ? String(image).trim() : 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
       seller_email: req.user.email,
