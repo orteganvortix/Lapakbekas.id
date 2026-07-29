@@ -32,7 +32,6 @@ function writeData(filePath, data) {
   } catch (e) {}
 }
 
-// Inisialisasi data.json kosong jika ada data dummy
 if (!fs.existsSync(datafile) || readData(datafile).some(p => p.title === 'Barang Dagangan' || p.price === 0)) {
   writeData(datafile, []);
 }
@@ -171,12 +170,10 @@ app.get('/sell', (req, res) => {
   return res.render('sell', { user: req.user, currentUser: req.user });
 });
 
-// Penanganan Mutlak Input Form Iklan (Tanpa Fallback Kosong/Dummy)
 app.post('/sell', (req, res) => {
   try {
     if (!req.user) return res.redirect('/login');
     
-    // Ambil data apa adanya dari payload POST
     const title = req.body.title || req.body.name || req.body.nama_barang || req.body.judul || req.body.product_name;
     const price = req.body.price || req.body.harga || req.body.amount;
     const category = req.body.category || req.body.kategori || req.body.cat;
@@ -185,9 +182,8 @@ app.post('/sell', (req, res) => {
     const description = req.body.description || req.body.deskripsi || req.body.desc;
     const image = req.body.image || req.body.foto || req.body.img || req.body.gambar;
 
-    // Validasi ketat: jika form kosong, tolak dan kembalikan ke halaman sell
     if (!title || !price) {
-      return.redirect('/sell');
+      return res.redirect('/sell');
     }
 
     const products = readData(datafile);
