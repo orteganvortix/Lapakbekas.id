@@ -32,12 +32,8 @@ app.use((req, res, next) => {
   const email = req.cookies.user_email;
   if (email) {
     const users = readData(usersFile);
-    const foundUser = users.find(u => u.email === email);
+    const foundUser = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
     if (foundUser) {
-      if (foundUser.name === "Pengguna Facebook" || (foundUser.name && foundUser.name.toLowerCase().includes("user.fb"))) {
-        foundUser.name = email.split('@')[0];
-        writeData(usersFile, users);
-      }
       req.user = foundUser;
     }
   }
@@ -50,7 +46,7 @@ app.get('/', (req, res) => {
   
   let filtered = products;
   if (search) {
-    filtered = filtered.filter(p => p.title.toLowerCase().includes(search.toLowerCase()));
+    filtered = filtered.filter(p => p.title && p.title.toLowerCase().includes(search.toLowerCase()));
   }
   if (category && category !== 'Semua') {
     filtered = filtered.filter(p => p.category === category);
@@ -59,10 +55,10 @@ app.get('/', (req, res) => {
     filtered = filtered.filter(p => p.condition === condition);
   }
   if (location && location !== 'Semua') {
-    filtered = filtered.filter(p => p.location.toLowerCase().includes(location.toLowerCase()));
+    filtered = filtered.filter(p => p.location && p.location.toLowerCase().includes(location.toLowerCase()));
   }
   
-  filtered.sort((a, b) => b.id - a.id);
+  filtered.sort((a, b) => Number(b.id) - Number(a.id));
   
   res.render('index', {
     products: filtered,
@@ -80,53 +76,65 @@ app.get('/login', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-  let { email, name, provider } = req.body;
-  if (!email) {
-    const randomId = Math.floor(Math.random() * 100000);
-    email = `fb_user_${randomId}@facebook.com`;
+  try {
+    let { email, name, provider } = req.body;
+    
+    const authProvider = provider || 'facebook';
+    
+    if (!email) {
+      const randomId = Math.floor(Math.random() * 90000) + 10000;
+      email = `fb_user_${randomId}@facebook.com`;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    let cleanName = name ? name.trim() : '';
+
+    if (!cleanName || cleanName === 'Pengguna Facebook' || cleanName.toLowerCase().includes('user.fb')) {
+      cleanName = cleanEmail.split('@')[0];
+    }
+
+    let autoAvatar = authProvider === 'facebook'
+      ? 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f65'
+      : 'https://images.unsplash.com/photo-1534528741775-53994a69dae8';
+
+    let users = readData(usersFile);
+    let user = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+
+    if (!user) {
+      user = {
+        email: cleanEmail,
+        name: cleanName,
+        phone: '',
+        location: '',
+        avatar: autoAvatar,
+        provider: authProvider,
+        joined_at: new Date().toLocaleDateString('id-ID')
+      };
+      users.push(user);
+      writeData(usersFile, users);
+    }
+
+    res.cookie('user_email', cleanEmail, { maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.cookie('user_name', user.name, { maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.cookie('user_provider', authProvider, { maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.cookie('user_avatar', user.avatar, { maxAge: 30 * 24 * 60 * 60 * 1000 });
+
+    return res.redirect('/profile');
+  } catch (err) {
+    console.error("Login Error:", err);
+    return res.redirect('/login');
   }
-
-  const cleanEmail = email.trim().toLowerCase();
-  let cleanName = name ? name.trim() : '';
-
-  if (!cleanName || cleanName === 'Pengguna Facebook' || cleanName.toLowerCase().includes('user.fb')) {
-    cleanName = cleanEmail.split('@')[0];
-  }
-
-  const authProvider = provider || 'facebook';
-  let autoAvatar = authProvider === 'facebook'
-    ? 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f65'
-    : 'https://images.unsplash.com/photo-1534528741775-53994a69dae8';
-
-  let users = readData(usersFile);
-  let user = users.find(u => u.email === cleanEmail);
-
-  if (!user) {
-    user = {
-      email: cleanEmail,
-      name: cleanName,
-      phone: '',
-      location: '',
-      avatar: autoAvatar,
-      provider: authProvider,
-      joined_at: new Date().toLocaleDateString('id-ID')
-    };
-    users.push(user);
-    writeData(usersFile, users);
-  }
-
-  res.cookie('user_email', cleanEmail, { maxAge: 30 * 24 * 60 * 60 * 1000 });
-  res.cookie('user_name', user.name, { maxAge: 30 * 24 * 60 * 60 * 1000 });
-  res.cookie('user_provider', authProvider, { maxAge: 30 * 24 * 60 * 60 * 1000 });
-  res.cookie('user_avatar', user.avatar, { maxAge: 30 * 24 * 60 * 60 * 1000 });
-
-  res.redirect('/profile');
 });
 
 app.get('/product/:id', (req, res) => {
   const products = readData(datafile);
-  const product = products.find(p => p.id == req.params.id);
-  if (!product) return res.status(404).send('Produk tidak ditemukan');
+  const targetId = String(req.params.id);
+  const product = products.find(p => String(p.id) === targetId);
+  
+  if (!product) {
+    return res.status(404).send('Produk tidak ditemukan atau ID tidak valid.');
+  }
+  
   res.render('product', { product, user: req.user || null });
 });
 
@@ -140,8 +148,10 @@ app.post('/sell', (req, res) => {
   const { title, price, category, condition, location, description, image } = req.body;
   const products = readData(datafile);
   
+  const lastId = products.length > 0 ? Number(products[products.length - 1].id) || products.length : 0;
+  
   const newProduct = {
-    id: products.length > 0 ? products[products.length - 1].id + 1 : 1,
+    id: lastId + 1,
     title: title || 'Tanpa Judul',
     price: Number(price) || 0,
     category: category || 'Lainnya',
@@ -163,14 +173,14 @@ app.post('/sell', (req, res) => {
 app.get('/profile', (req, res) => {
   if (!req.user) return res.redirect('/login');
   const products = readData(datafile);
-  const myProducts = products.filter(p => p.seller_email === req.user.email);
+  const myProducts = products.filter(p => p.seller_email && p.seller_email.toLowerCase() === req.user.email.toLowerCase());
   res.render('profile', { user: req.user, products: myProducts });
 });
 
 app.post('/profile', (req, res) => {
   if (!req.user) return res.redirect('/login');
   let users = readData(usersFile);
-  let index = users.findIndex(u => u.email === req.user.email);
+  let index = users.findIndex(u => u.email && u.email.toLowerCase() === req.user.email.toLowerCase());
   if (index !== -1) {
     users[index].name = req.body.name || users[index].name;
     users[index].phone = req.body.phone || users[index].phone;
