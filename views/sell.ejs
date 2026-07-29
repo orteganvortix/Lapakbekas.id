@@ -7,61 +7,60 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <div class="max-w-xl mx-auto py-8 px-4">
-        <div class="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
-            <h1 class="text-2xl font-black text-emerald-900 mb-6">Pasang Iklan Baru</h1>
+    <div class="max-w-md mx-auto py-8 px-4">
+        <div class="bg-white rounded-3xl shadow-md p-6 border border-gray-100 space-y-6">
+            <h1 class="text-xl font-black text-emerald-900">Pasang Iklan Baru</h1>
             <form action="/sell" method="POST" class="space-y-4">
                 <div>
-                    <label class="block text-gray-700 font-semibold text-sm mb-1">Barang yang Dijual <span class="text-red-500">*</span></label>
-                    <input type="text" name="title" required placeholder="Contoh: Honda Vario 150 CBS ISS" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <label class="block text-gray-700 font-bold text-xs mb-1">Barang yang Dijual *</label>
+                    <input type="text" name="title" required placeholder="Contoh: Honda Vario 150 CBS ISS" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none">
                 </div>
 
                 <div>
-                    <label class="block text-gray-700 font-semibold text-sm mb-1">Harga (Rp) <span class="text-red-500">*</span></label>
-                    <input type="text" id="priceInput" name="price" required placeholder="Contoh: 15.000.000" oninput="formatRupiah(this)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <label class="block text-gray-700 font-bold text-xs mb-1">Harga (Rp) *</label>
+                    <input type="text" name="price" required placeholder="Contoh: 15.000.000" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none">
                 </div>
 
                 <div>
-                    <label class="block text-gray-700 font-semibold text-sm mb-1">Kategori <span class="text-red-500">*</span></label>
-                    <select name="category" id="categorySelect" onchange="updateBrands()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                        <option value="Elektronik & Gadget">Elektronik & Gadget</option>
-                        <option value="Kendaraan">Kendaraan</option>
-                        <option value="Perabotan Rumah">Perabotan Rumah</option>
-                        <option value="Hobi & Lainnya">Hobi & Lainnya</option>
+                    <label class="block text-gray-700 font-bold text-xs mb-1">Nomor WhatsApp Aktif *</label>
+                    <input type="text" name="whatsapp" required placeholder="Contoh: 081234567890" value="<%= user.phone || '' %>" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 font-bold text-xs mb-1">Kategori *</label>
+                    <select name="category" id="categorySelect" onchange="updateBrands()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none">
+                        <% Object.keys(brandsMap).forEach(cat => { %>
+                            <option value="<%= cat %>"><%= cat %></option>
+                        <% }) %>
                     </select>
                 </div>
 
                 <div>
-                    <label class="block text-gray-700 font-semibold text-sm mb-1">Merk / Type <span class="text-red-500">*</span></label>
-                    <select name="brand" id="brandSelect" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                        <!-- Otomatis sesuai kategori -->
-                    </select>
+                    <label class="block text-gray-700 font-bold text-xs mb-1">Merk / Type *</label>
+                    <select name="brand" id="brandSelect" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none"></select>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-gray-700 font-semibold text-sm mb-1">Kondisi <span class="text-red-500">*</span></label>
-                        <select name="condition" id="conditionSelect" onchange="toggleDamage()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <label class="block text-gray-700 font-bold text-xs mb-1">Kondisi *</label>
+                        <select name="condition" id="conditionSelect" onchange="toggleDamage()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none">
                             <option value="Bekas">Bekas</option>
                             <option value="Baru">Baru</option>
                         </select>
                     </div>
                     <div id="damageContainer">
-                        <label class="block text-gray-700 font-semibold text-sm mb-1">Persentase Kerusakan / Mulus <span class="text-red-500">*</span></label>
-                        <select name="damage_percent" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                            <option value="95% Mulus (Minim Pemakaian)">95% Mulus (Minim Pemakaian)</option>
+                        <label class="block text-gray-700 font-bold text-xs mb-1">Tingkat Mulus *</label>
+                        <select name="damage_percent" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none">
+                            <option value="95% Mulus">95% Mulus</option>
                             <option value="90% Mulus">90% Mulus</option>
                             <option value="85% Normal">85% Normal</option>
-                            <option value="80% Layak Pakai">80% Layak Pakai</option>
-                            <option value="75% Minus Pemakaian">75% Minus Pemakaian</option>
-                            <option value="50% Rusak / Kanibal">50% Rusak / Kanibal</option>
                         </select>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-gray-700 font-semibold text-sm mb-1">Lokasi (Kec, Kab/Kota) <span class="text-red-500">*</span></label>
-                    <select name="location" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <label class="block text-gray-700 font-bold text-xs mb-1">Lokasi (Kec, Kab/Kota) *</label>
+                    <select name="location" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none">
                         <% locations.forEach(loc => { %>
                             <option value="<%= loc %>"><%= loc %></option>
                         <% }) %>
@@ -69,23 +68,17 @@
                 </div>
 
                 <div>
-                    <label class="block text-gray-700 font-semibold text-sm mb-1">Upload Foto / Gambar dari Galeri <span class="text-red-500">*</span></label>
-                    <input type="file" id="imageFile" accept="image/*" onchange="previewImage(this)" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
-                    <input type="hidden" name="image_base64" id="imageBase64">
-                    <div id="imagePreviewContainer" class="mt-2 hidden">
-                        <img id="imgPreview" src="" alt="Preview" class="w-32 h-32 object-cover rounded-xl border border-gray-200 shadow-sm">
-                    </div>
+                    <label class="block text-gray-700 font-bold text-xs mb-1">Upload Foto / Gambar (Maksimal 10 Foto) *</label>
+                    <input type="file" id="imageInput" accept="image/*" multiple onchange="handleFiles(this)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs file:mr-2 file:py-1 file:px-3 file:rounded-lg file:bg-emerald-50 file:text-emerald-700">
+                    <div id="previewContainer" class="grid grid-cols-5 gap-2 mt-2"></div>
                 </div>
 
                 <div>
-                    <label class="block text-gray-700 font-semibold text-sm mb-1">Deskripsi Lengkap</label>
-                    <textarea name="description" rows="4" placeholder="Jelaskan spesifikasi dan kelengkapan barang..." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                    <label class="block text-gray-700 font-bold text-xs mb-1">Deskripsi Lengkap</label>
+                    <textarea name="description" rows="3" placeholder="Jelaskan spesifikasi dan kelengkapan..." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none"></textarea>
                 </div>
 
-                <div class="flex gap-3 pt-2">
-                    <button type="submit" class="flex-1 bg-emerald-700 text-white font-bold py-3 rounded-xl hover:bg-emerald-800 transition text-sm shadow-md">Terbitkan Iklan</button>
-                    <a href="/" class="flex-1 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-center hover:bg-gray-300 transition text-sm">Batal</a>
-                </div>
+                <button type="submit" class="w-full bg-emerald-700 text-white font-bold py-3 rounded-xl hover:bg-emerald-800 transition text-xs shadow-md">Terbitkan Iklan</button>
             </form>
         </div>
     </div>
@@ -99,8 +92,7 @@
             if (brandsMap[cat]) {
                 brandsMap[cat].forEach(b => {
                     const opt = document.createElement('option');
-                    opt.value = b;
-                    opt.textContent = b;
+                    opt.value = b; opt.textContent = b;
                     brandSel.appendChild(opt);
                 });
             }
@@ -109,33 +101,25 @@
 
         function toggleDamage() {
             const cond = document.getElementById('conditionSelect').value;
-            const dmgCont = document.getElementById('damageContainer');
-            if (cond === 'Baru') {
-                dmgCont.style.display = 'none';
-            } else {
-                dmgCont.style.display = 'block';
-            }
+            document.getElementById('damageContainer').style.display = cond === 'Baru' ? 'none' : 'block';
         }
 
-        function formatRupiah(input) {
-            let val = input.value.replace(/[^0-9]/g, '');
-            if (val) {
-                input.value = Number(val).toLocaleString('id-ID');
-            } else {
-                input.value = '';
-            }
-        }
-
-        function previewImage(input) {
-            if (input.files && input.files[0]) {
+        function handleFiles(input) {
+            const container = document.getElementById('previewContainer');
+            container.innerHTML = '';
+            const files = Array.from(input.files).slice(0, 10); // Batasi maks 10 foto
+            
+            files.forEach(file => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    document.getElementById('imgPreview').src = e.target.result;
-                    document.getElementById('imageBase64').value = e.target.result;
-                    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                    const div = document.createElement('div');
+                    div.className = 'relative w-full h-16';
+                    div.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover rounded-lg border">
+                                     <input type="hidden" name="images" value="${e.target.result}">`;
+                    container.appendChild(div);
                 }
-                reader.readAsDataURL(input.files[0]);
-            }
+                reader.readAsDataURL(file);
+            });
         }
     </script>
 </body>
