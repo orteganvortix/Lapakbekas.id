@@ -28,7 +28,6 @@ function writeData(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
-// Global User Middleware
 app.use((req, res, next) => {
   const email = req.cookies.user_email;
   if (email) {
@@ -45,7 +44,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// 1. Home Route
 app.get('/', (req, res) => {
   const products = readData(datafile);
   const { search, category, condition, location } = req.query;
@@ -76,13 +74,11 @@ app.get('/', (req, res) => {
   });
 });
 
-// 2. Login Page
 app.get('/login', (req, res) => {
   if (req.user) return res.redirect('/profile');
   res.render('login', { user: req.user || null });
 });
 
-// 3. Login Handler (Google & Facebook Mock/Direct)
 app.post('/login', (req, res) => {
   let { email, name, provider } = req.body;
   if (!email) return res.redirect('/login');
@@ -127,7 +123,6 @@ app.post('/login', (req, res) => {
   res.redirect('/profile');
 });
 
-// 4. Product Detail Route
 app.get('/product/:id', (req, res) => {
   const products = readData(datafile);
   const product = products.find(p => p.id == req.params.id);
@@ -135,7 +130,6 @@ app.get('/product/:id', (req, res) => {
   res.render('product', { product, user: req.user || null });
 });
 
-// 5. Sell Route (Get & Post)
 app.get('/sell', (req, res) => {
   if (!req.user) return res.redirect('/login');
   res.render('sell', { user: req.user });
@@ -166,7 +160,6 @@ app.post('/sell', (req, res) => {
   res.redirect('/');
 });
 
-// 6. Profile Route (Get & Post)
 app.get('/profile', (req, res) => {
   if (!req.user) return res.redirect('/login');
   const products = readData(datafile);
@@ -187,7 +180,6 @@ app.post('/profile', (req, res) => {
   res.redirect('/profile');
 });
 
-// 7. Logout Route
 app.get('/logout', (req, res) => {
   res.clearCookie('user_email');
   res.clearCookie('user_name');
