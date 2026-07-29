@@ -3,101 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - LapakBekas.id</title>
+    <title>Login Resmi - LapakBekas.id</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Identity Services SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex items-center justify-center px-4">
-    <div class="max-w-md w-full bg-white rounded-3xl shadow-lg p-8 border border-gray-100 space-y-6">
-        <div class="text-center space-y-2">
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-lg p-8 border border-gray-100 text-center space-y-6">
+        <div class="space-y-2">
             <h1 class="text-2xl font-black text-emerald-900">LapakBekas.id</h1>
-            <p class="text-xs text-gray-500">Masuk menggunakan akun Google di HP Anda</p>
+            <p class="text-xs text-gray-500">Silakan masuk menggunakan akun Gmail asli Anda untuk melanjutkan.</p>
         </div>
 
-        <form action="/login" method="POST" class="space-y-4">
-            <div>
-                <label class="block text-gray-700 font-bold text-xs mb-1">Email Google (Gmail) *</label>
-                <input type="email" id="emailInput" name="email" required placeholder="Contoh: namaanda@gmail.com" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs focus:outline-none">
+        <!-- Tombol Resmi Google Login -->
+        <div class="flex justify-center py-4">
+            <div id="g_id_onload"
+                 data-client_id="762977507378-mns48geiscvqu0rpqdpb6ltnqsa6rk22.apps.googleusercontent.com"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
             </div>
-
-            <div>
-                <label class="block text-gray-700 font-bold text-xs mb-1">Nama Lengkap *</label>
-                <input type="text" name="name" required placeholder="Masukkan Nama Anda" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs focus:outline-none">
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-size="large"
+                 data-theme="outline"
+                 data-text="sign_in_with"
+                 data-shape="rectangular"
+                 data-logo_alignment="left">
             </div>
+        </div>
 
-            <div>
-                <label class="block text-gray-700 font-bold text-xs mb-1">Nomor WhatsApp *</label>
-                <div class="flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
-                    <span class="bg-gray-200 text-gray-700 font-bold px-3 py-3 text-xs border-r border-gray-200">+62</span>
-                    <input type="tel" name="phone" required placeholder="81234567890" class="w-full bg-transparent px-3 py-3 text-xs focus:outline-none">
-                </div>
-            </div>
-
-            <div class="relative">
-                <label class="block text-emerald-900 font-black text-xs mb-1">Alamat (Kecamatan, Kabupaten/Kota, Provinsi) *</label>
-                <input type="text" id="locationInput" name="location" required autocomplete="off" placeholder="Ketik kecamatan/kota (misal: Cisarua)..." oninput="searchLocation(this.value)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs focus:outline-none">
-                <div id="locationDropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-xl mt-1 max-h-48 overflow-y-auto z-20 hidden shadow-lg"></div>
-                <p class="text-[10px] text-gray-500 mt-1">Pilih dari data resmi wilayah Indonesia.</p>
-            </div>
-
-            <button type="submit" class="w-full bg-emerald-700 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-800 transition text-xs shadow-md mt-2">Masuk / Simpan Profil</button>
-        </form>
+        <p class="text-[10px] text-gray-400">Dengan masuk, Anda menyetujui verifikasi keamanan berbasis akun Google asli.</p>
     </div>
 
+    <form id="authForm" action="/auth/google/callback" method="POST" class="hidden">
+        <input type="hidden" name="credential" id="credentialInput">
+    </form>
+
     <script>
-        // Deteksi otomatis jika browser menyimpan email/akun
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedEmail = localStorage.getItem('user_saved_gmail');
-            if (savedEmail) {
-                document.getElementById('emailInput').value = savedEmail;
-            }
-        });
-
-        document.querySelector('form').addEventListener('submit', () => {
-            const email = document.getElementById('emailInput').value;
-            if (email) localStorage.setItem('user_saved_gmail', email);
-        });
-
-        let searchTimeout = null;
-        async function searchLocation(query) {
-            const dropdown = document.getElementById('locationDropdown');
-            if (!query || query.length < 2) {
-                dropdown.classList.add('hidden');
-                return;
-            }
-
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(async () => {
-                try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Indonesia")}&countrycodes=id&limit=10`);
-                    const data = await res.json();
-                    
-                    dropdown.innerHTML = '';
-                    if (data && data.length > 0) {
-                        data.forEach(item => {
-                            const div = document.createElement('div');
-                            div.className = 'px-4 py-2.5 text-xs hover:bg-emerald-50 cursor-pointer font-medium text-gray-700 border-b border-gray-100 last:border-b-0';
-                            div.textContent = item.display_name;
-                            div.onclick = function() {
-                                document.getElementById('locationInput').value = item.display_name;
-                                dropdown.classList.add('hidden');
-                            };
-                            dropdown.appendChild(div);
-                        });
-                        dropdown.classList.remove('hidden');
-                    } else {
-                        dropdown.classList.add('hidden');
-                    }
-                } catch (e) {
-                    dropdown.classList.add('hidden');
-                }
-            }, 300);
+        function handleCredentialResponse(response) {
+            // Kirim token JWT Google ke server untuk diverifikasi keasliannya
+            document.getElementById('credentialInput').value = response.credential;
+            document.getElementById('authForm').submit();
         }
-
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('#locationInput') && !e.target.closest('#locationDropdown')) {
-                document.getElementById('locationDropdown').classList.add('hidden');
-            }
-        });
     </script>
 </body>
 </html>
+
