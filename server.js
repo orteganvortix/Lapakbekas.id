@@ -69,7 +69,8 @@ app.get('/', (req, res) => {
     search: search || '',
     selectedCategory: category || 'Semua',
     selectedCondition: condition || 'Semua',
-    selectedLocation: location || 'Semua'
+    selectedLocation: location || 'Semua',
+    user: req.user || null
   });
 });
 
@@ -153,4 +154,3 @@ app.get('/logout', (req, res) => {
 app.listen(PORT, () => {
   console.log(`LAPAKBEKAS.ID Aktif di http://localhost:${PORT}`);
 });
-
