@@ -7,47 +7,85 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
-    <nav class="bg-emerald-800 text-white sticky top-0 z-50">
+    <nav class="bg-emerald-800 text-white sticky top-0 z-50 shadow-sm">
         <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
             <a href="/" class="text-lg font-black tracking-wider">LAPAKBEKAS<span class="text-emerald-400">.ID</span></a>
-            <a href="/" class="text-xs font-bold text-emerald-200">&larr; Beranda</a>
+            <div class="flex items-center gap-2">
+                <a href="/" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-bold text-xs">Beranda</a>
+                <a href="/logout" class="bg-rose-700 hover:bg-rose-800 text-white px-3 py-1.5 rounded-xl font-bold text-xs">Keluar</a>
+            </div>
         </div>
     </nav>
 
-    <main class="max-w-md mx-auto px-4 py-6 flex-1 w-full space-y-4">
-        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
-            <img src="<%= user.avatar %>" alt="Avatar" class="w-14 h-14 rounded-full object-cover border-2 border-emerald-500">
-            <div class="flex-1 overflow-hidden">
-                <h1 class="text-sm font-black text-gray-800 truncate"><%= user.name %></h1>
-                <p class="text-[11px] text-gray-500 truncate"><%= user.email %></p>
+    <main class="max-w-md mx-auto px-4 py-6 flex-1 w-full space-y-6">
+        <!-- Info Akun -->
+        <div class="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-center gap-4">
+            <img src="<%= user.avatar %>" alt="Avatar" class="w-16 h-16 rounded-full object-cover border-2 border-emerald-600">
+            <div>
+                <h1 class="font-black text-gray-800 text-sm"><%= user.name %></h1>
+                <p class="text-xs text-gray-500 truncate"><%= user.email %></p>
+                <span class="inline-block mt-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md">Akun Terverifikasi</span>
             </div>
-            <a href="/logout" class="bg-red-50 text-red-600 px-3 py-1.5 rounded-xl font-bold text-xs">Keluar</a>
         </div>
 
-        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 space-y-4">
-            <h2 class="text-xs font-black uppercase tracking-wider text-gray-700">Iklan Saya (<%= myProducts.length %>)</h2>
+        <!-- Daftar Iklan Saya -->
+        <div class="space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs font-black uppercase tracking-wider text-gray-700">Iklan Saya (<%= myProducts.length %>)</h2>
+                <a href="/sell" class="bg-amber-400 hover:bg-amber-500 text-emerald-950 font-black px-3 py-1.5 rounded-xl text-xs shadow-sm">+ Pasang Iklan</a>
+            </div>
+
             <% if (myProducts.length === 0) { %>
-                <div class="text-center py-8">
-                    <p class="text-xs text-gray-400 mb-3">Belum ada iklan.</p>
-                    <a href="/sell" class="bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold">+ Pasang Iklan</a>
+                <div class="bg-white rounded-3xl border border-gray-100 p-8 text-center space-y-3">
+                    <p class="text-xs font-bold text-gray-500">Anda belum pernah memasang iklan.</p>
+                    <a href="/sell" class="inline-block bg-emerald-700 text-white font-bold px-5 py-2 rounded-xl text-xs">Pasang Iklan Sekarang</a>
                 </div>
             <% } else { %>
                 <div class="space-y-3">
                     <% myProducts.forEach(product => { %>
-                        <div class="border border-gray-100 rounded-2xl p-3 flex gap-3 items-center justify-between">
-                            <img src="<%= product.image || (product.images && product.images[0]) %>" class="w-16 h-16 object-cover rounded-xl">
-                            <div class="flex-1">
-                                <h3 class="font-bold text-gray-800 text-xs line-clamp-1"><%= product.title %></h3>
-                                <p class="text-emerald-700 font-black text-xs">Rp <%= Number(product.price).toLocaleString('id-ID') %></p>
-                                <span class="text-[10px] px-2 py-0.5 rounded font-bold <%= product.sold ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700' %>">
-                                    <%= product.sold ? 'Sudah Terjual' : 'Aktif' %>
-                                </span>
+                        <div class="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm space-y-3">
+                            <div class="flex gap-3">
+                                <img src="<%= product.image || (product.images && product.images[0]) %>" alt="<%= product.title %>" class="w-20 h-20 object-cover rounded-xl">
+                                <div class="flex-1 flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex justify-between items-start">
+                                            <span class="text-[9px] font-bold px-2 py-0.5 rounded-md 
+                                                <%= product.sold ? 'bg-rose-100 text-rose-700' : (product.booked ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700') %>">
+                                                <%= product.sold ? 'TERJUAL' : (product.booked ? 'DIBOOKING' : 'AKTIF') %>
+                                            </span>
+                                            <span class="text-[10px] text-gray-400"><%= product.created_at %></span>
+                                        </div>
+                                        <h3 class="font-bold text-gray-800 text-xs mt-1 line-clamp-1"><%= product.title %></h3>
+                                        <p class="text-emerald-700 font-black text-xs mt-0.5">Rp <%= Number(product.price).toLocaleString('id-ID') %></p>
+                                    </div>
+                                </div>
                             </div>
-                            <form action="/profile/sold/<%= product.id %>" method="POST">
-                                <button type="submit" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-bold px-3 py-2 rounded-xl transition">
-                                    <%= product.sold ? 'Aktifkan' : 'Tandai Terjual' %>
-                                </button>
-                            </form>
+
+                            <!-- Tombol Kontrol / Status Iklan -->
+                            <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-gray-100">
+                                <% if (!product.sold) { %>
+                                    <% if (!product.booked) { %>
+                                        <form action="/profile/status/<%= product.id %>/booked" method="POST">
+                                            <button type="submit" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold py-1.5 rounded-lg text-[10px] transition">Booking</button>
+                                        </form>
+                                    <% } else { %>
+                                        <form action="/profile/status/<%= product.id %>/active" method="POST">
+                                            <button type="submit" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1.5 rounded-lg text-[10px] transition">Batal Book</button>
+                                        </form>
+                                    <% } %>
+                                    <form action="/profile/status/<%= product.id %>/sold" method="POST">
+                                        <button type="submit" class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-1.5 rounded-lg text-[10px] transition">Terjual</button>
+                                    </form>
+                                <% } else { %>
+                                    <form action="/profile/status/<%= product.id %>/active" method="POST" class="col-span-2">
+                                        <button type="submit" class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-1.5 rounded-lg text-[10px] transition">Aktifkan Kembali</button>
+                                    </form>
+                                <% } %>
+
+                                <form action="/profile/delete/<%= product.id %>" method="POST" onsubmit="return confirm('Yakin ingin menghapus iklan ini?')">
+                                    <button type="submit" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-1.5 rounded-lg text-[10px] transition">Hapus</button>
+                                </form>
+                            </div>
                         </div>
                     <% }) %>
                 </div>

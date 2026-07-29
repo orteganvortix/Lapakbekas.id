@@ -78,6 +78,7 @@ app.get('/', (req, res) => {
     const products = readData(datafile);
     const { search, category, brand, condition, lat, lon } = req.query;
     
+    // Sembunyikan barang yang sudah terjual dari beranda
     let filtered = products.filter(p => !p.sold);
     
     if (search) {
@@ -93,17 +94,14 @@ app.get('/', (req, res) => {
       filtered = filtered.filter(p => p.condition === condition);
     }
 
-    // Urutkan berdasarkan kedekatan koordinat jika tersedia, atau ID terbaru
     const userLat = lat ? parseFloat(lat) : null;
     const userLon = lon ? parseFloat(lon) : null;
 
     filtered.forEach(p => {
-      // Dummy koordinat center wilayah jika produk tidak punya koordinat khusus (misal default Cisarua -6.69, 106.94)
       p._lat = p.lat || -6.6912;
       p._lon = p.lon || 106.9421;
       
       if (userLat && userLon) {
-        // Hitung jarak sederhana (Haversine formula ringkas)
         const dLat = p._lat - userLat;
         const dLon = p._lon - userLon;
         p._distance = Math.sqrt(dLat * dLat + dLon * dLon);
@@ -199,7 +197,12 @@ app.post('/sell', (req, res) => {
     const condition = req.body.condition || 'Bekas';
     const damagePercent = condition === 'Bekas' ? (req.body.damage_percent || '90%') : '100%';
     const location = req.body.location || req.user.location || 'Cisarua, Bogor, Jawa Barat';
-    const whatsapp = req.body.whatsapp || req.user.phone || '';
+    
+    // Pastikan nomor whatsapp terformat dengan +62 di depan
+    let rawWa = String(req.body.whatsapp || '').replace(/[^0-9]/g, '');
+    if (rawWa.startsWith('0')) rawWa = rawWa.substring(1);
+    const whatsapp = '+62' + rawWa;
+
     const description = req.body.description || '';
     
     let images = [];
@@ -226,19 +229,20 @@ app.post('/sell', (req, res) => {
       condition: String(condition).trim(),
       damage_percent: String(damagePercent).trim(),
       location: String(location).trim(),
-      whatsapp: String(whatsapp).trim(),
+      whatsapp: whatsapp,
       description: String(description).trim(),
       images: images,
       image: images[0],
       seller_email: req.user.email,
       seller_name: req.user.name,
-      sold: false,
+      sold: false,     // false = Aktif, true = Terjual
+      booked: false,   // true = Dibooking
       created_at: new Date().toLocaleDateString('id-ID')
     };
 
     products.push(newProduct);
     writeData(datafile, products);
-    return res.redirect('/');
+    return res.redirect('/profile');
   } catch (e) {
     return res.redirect('/sell');
   }
@@ -255,16 +259,40 @@ app.get('/profile', (req, res) => {
   }
 });
 
-app.post('/profile/sold/:id', (req, res) => {
+// Ubah status jadi Terjual
+app.post('/profile/status/:id/:status', (req, res) => {
   if (!req.user) return res.redirect('/login');
   try {
     const products = readData(datafile);
     const targetId = String(req.params.id);
-    const prod = products.find(p => String(p.id) === targetId && p.seller_email.toLowerCase() === req.user.email.toLowerCase());
+    const actionStatus = req.params.status; // 'sold', 'booked', 'active'
+    
+    const prod = products.find(p => String(p.id) === targetId && p.seller_email && p.seller_email.toLowerCase() === req.user.email.toLowerCase());
     if (prod) {
-      prod.sold = !prod.sold;
+      if (actionStatus === 'sold') {
+        prod.sold = true;
+        prod.booked = false;
+      } else if (actionStatus === 'booked') {
+        prod.sold = false;
+        prod.booked = true;
+      } else if (actionStatus === 'active') {
+        prod.sold = false;
+        prod.booked = false;
+      }
       writeData(datafile, products);
     }
+  } catch (e) {}
+  return res.redirect('/profile');
+});
+
+// Hapus Iklan
+app.post('/profile/delete/:id', (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  try {
+    let products = readData(datafile);
+    const targetId = String(req.params.id);
+    products = products.filter(p => !(String(p.id) === targetId && p.seller_email && p.seller_email.toLowerCase() === req.user.email.toLowerCase()));
+    writeData(datafile, products);
   } catch (e) {}
   return res.redirect('/profile');
 });
