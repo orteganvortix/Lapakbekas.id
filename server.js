@@ -121,12 +121,18 @@ app.get('/login', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-    const { email, name, provider } = req.body;
-    if (!email) return res.redirect('/login');
+  let { email, name, provider } = req.body;
+  if (!email) return res.redirect('/login');
 
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanName = name ? name.trim() : cleanEmail.split('@')[0];
-    const authProvider = provider || 'google';
+  const cleanEmail = email.trim().toLowerCase();
+  let cleanName = name ? name.trim() : '';
+  
+  
+  if (!cleanName || cleanName === 'Pengguna Facebook' || cleanName.includes('user.fb')) {
+    cleanName = cleanEmail.split('@')[0];
+  }
+  const authProvider = provider || 'google';
+
 
     // Set Foto Profil otomatis berdasarkan Provider Login
     let autoAvatar = authProvider === 'facebook' 
