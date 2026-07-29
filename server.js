@@ -166,28 +166,28 @@ app.get('/sell', (req, res) => {
   return res.render('sell', { user: req.user, currentUser: req.user });
 });
 
-// Perbaikan Total pada Penanganan Form Tambah Iklan (Sell)
+// Penanganan Menyeluruh untuk Menyimpan Data Iklan Baru
 app.post('/sell', (req, res) => {
   try {
     if (!req.user) return res.redirect('/login');
     
-    // Menangkap seluruh kemungkinan nama field dari form frontend Anda
-    const title = req.body.title || req.body.nama_barang || req.body.judul;
-    const price = req.body.price || req.body.harga;
-    const category = req.body.category || req.body.kategori;
+    // Menangkap seluruh variasi penamaan field dari form HTML manapun
+    const title = req.body.title || req.body.name || req.body.nama_barang || req.body.judul || req.body.product_name;
+    const price = req.body.price || req.body.harga || req.body.amount;
+    const category = req.body.category || req.body.kategori || req.body.cat;
     const condition = req.body.condition || req.body.kondisi;
-    const location = req.body.location || req.body.lokasi || req.user.location;
-    const description = req.body.description || req.body.deskripsi;
-    const image = req.body.image || req.body.foto || req.body.img;
+    const location = req.body.location || req.body.lokasi || req.body.kota || req.user.location;
+    const description = req.body.description || req.body.deskripsi || req.body.desc;
+    const image = req.body.image || req.body.foto || req.body.img || req.body.gambar;
 
     const products = readData(datafile);
     const lastId = products.length > 0 ? (Number(products[products.length - 1].id) || products.length) : 0;
     
     const newProduct = {
       id: lastId + 1,
-      title: title ? String(title).trim() : 'Tanpa Judul',
+      title: title ? String(title).trim() : 'Barang Dagangan',
       price: price ? Number(String(price).replace(/[^0-9]/g, '')) || 0 : 0,
-      category: category ? String(category).trim() : 'Lainnya',
+      category: category ? String(category).trim() : 'Umum',
       condition: condition ? String(condition).trim() : 'Bekas',
       location: location ? String(location).trim() : 'Indonesia',
       description: description ? String(description).trim() : '',
