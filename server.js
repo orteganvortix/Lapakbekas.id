@@ -48,24 +48,6 @@ app.use((req, res, next) => {
   next();
 });
 
-const INDONESIA_LOCATIONS = [
-  "Cisarua, Bogor, Jawa Barat",
-  "Bogor, Jawa Barat",
-  "Jakarta Selatan, DKI Jakarta",
-  "Jakarta Pusat, DKI Jakarta",
-  "Jakarta Barat, DKI Jakarta",
-  "Jakarta Timur, DKI Jakarta",
-  "Jakarta Utara, DKI Jakarta",
-  "Depok, Jawa Barat",
-  "Bekasi, Jawa Barat",
-  "Tangerang, Banten",
-  "Bandung, Jawa Barat",
-  "Surabaya, Jawa Timur",
-  "Medan, Sumatera Utara",
-  "Semarang, Jawa Tengah",
-  "Yogyakarta, DI Yogyakarta"
-];
-
 const BRANDS_BY_CATEGORY = {
   "Elektronik & Gadget": ["Samsung", "Apple", "Xiaomi", "Oppo", "Vivo", "Asus", "Lenovo", "Sony", "LG", "Realme", "Infinix", "Acer", "MSI", "Fiberhome", "ZTE", "Lainnya"],
   "Kendaraan": ["Honda", "Yamaha", "Suzuki", "Kawasaki", "Toyota", "Daihatsu", "Mitsubishi", "Hyundai", "Vespa", "Lainnya"],
@@ -78,7 +60,6 @@ app.get('/', (req, res) => {
     const products = readData(datafile);
     const { search, category, brand, condition, lat, lon } = req.query;
     
-    // Sembunyikan barang yang sudah terjual dari beranda
     let filtered = products.filter(p => !p.sold);
     
     if (search) {
@@ -183,7 +164,7 @@ app.get('/product/:id', (req, res) => {
 
 app.get('/sell', (req, res) => {
   if (!req.user) return res.redirect('/login');
-  return res.render('sell', { user: req.user, locations: INDONESIA_LOCATIONS, brandsMap: BRANDS_BY_CATEGORY });
+  return res.render('sell', { user: req.user, brandsMap: BRANDS_BY_CATEGORY });
 });
 
 app.post('/sell', (req, res) => {
@@ -198,7 +179,6 @@ app.post('/sell', (req, res) => {
     const damagePercent = condition === 'Bekas' ? (req.body.damage_percent || '90%') : '100%';
     const location = req.body.location || req.user.location || 'Cisarua, Bogor, Jawa Barat';
     
-    // Pastikan nomor whatsapp terformat dengan +62 di depan
     let rawWa = String(req.body.whatsapp || '').replace(/[^0-9]/g, '');
     if (rawWa.startsWith('0')) rawWa = rawWa.substring(1);
     const whatsapp = '+62' + rawWa;
@@ -235,8 +215,8 @@ app.post('/sell', (req, res) => {
       image: images[0],
       seller_email: req.user.email,
       seller_name: req.user.name,
-      sold: false,     // false = Aktif, true = Terjual
-      booked: false,   // true = Dibooking
+      sold: false,
+      booked: false,
       created_at: new Date().toLocaleDateString('id-ID')
     };
 
@@ -259,13 +239,12 @@ app.get('/profile', (req, res) => {
   }
 });
 
-// Ubah status jadi Terjual
 app.post('/profile/status/:id/:status', (req, res) => {
   if (!req.user) return res.redirect('/login');
   try {
     const products = readData(datafile);
     const targetId = String(req.params.id);
-    const actionStatus = req.params.status; // 'sold', 'booked', 'active'
+    const actionStatus = req.params.status;
     
     const prod = products.find(p => String(p.id) === targetId && p.seller_email && p.seller_email.toLowerCase() === req.user.email.toLowerCase());
     if (prod) {
@@ -285,7 +264,6 @@ app.post('/profile/status/:id/:status', (req, res) => {
   return res.redirect('/profile');
 });
 
-// Hapus Iklan
 app.post('/profile/delete/:id', (req, res) => {
   if (!req.user) return res.redirect('/login');
   try {
