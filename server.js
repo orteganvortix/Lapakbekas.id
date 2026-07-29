@@ -32,6 +32,11 @@ function writeData(filePath, data) {
   } catch (e) {}
 }
 
+// Inisialisasi data.json kosong jika ada data dummy
+if (!fs.existsSync(datafile) || readData(datafile).some(p => p.title === 'Barang Dagangan' || p.price === 0)) {
+  writeData(datafile, []);
+}
+
 app.use((req, res, next) => {
   try {
     const email = req.cookies.user_email;
@@ -166,12 +171,12 @@ app.get('/sell', (req, res) => {
   return res.render('sell', { user: req.user, currentUser: req.user });
 });
 
-// Penanganan Menyeluruh untuk Menyimpan Data Iklan Baru
+// Penanganan Mutlak Input Form Iklan (Tanpa Fallback Kosong/Dummy)
 app.post('/sell', (req, res) => {
   try {
     if (!req.user) return res.redirect('/login');
     
-    // Menangkap seluruh variasi penamaan field dari form HTML manapun
+    // Ambil data apa adanya dari payload POST
     const title = req.body.title || req.body.name || req.body.nama_barang || req.body.judul || req.body.product_name;
     const price = req.body.price || req.body.harga || req.body.amount;
     const category = req.body.category || req.body.kategori || req.body.cat;
@@ -180,14 +185,19 @@ app.post('/sell', (req, res) => {
     const description = req.body.description || req.body.deskripsi || req.body.desc;
     const image = req.body.image || req.body.foto || req.body.img || req.body.gambar;
 
+    // Validasi ketat: jika form kosong, tolak dan kembalikan ke halaman sell
+    if (!title || !price) {
+      return.redirect('/sell');
+    }
+
     const products = readData(datafile);
     const lastId = products.length > 0 ? (Number(products[products.length - 1].id) || products.length) : 0;
     
     const newProduct = {
       id: lastId + 1,
-      title: title ? String(title).trim() : 'Barang Dagangan',
-      price: price ? Number(String(price).replace(/[^0-9]/g, '')) || 0 : 0,
-      category: category ? String(category).trim() : 'Umum',
+      title: String(title).trim(),
+      price: Number(String(price).replace(/[^0-9]/g, '')) || 0,
+      category: category ? String(category).trim() : 'Lainnya',
       condition: condition ? String(condition).trim() : 'Bekas',
       location: location ? String(location).trim() : 'Indonesia',
       description: description ? String(description).trim() : '',
