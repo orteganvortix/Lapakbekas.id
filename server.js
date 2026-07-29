@@ -81,7 +81,10 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
   let { email, name, provider } = req.body;
-  if (!email) return res.redirect('/login');
+  if (!email) {
+    const randomId = Math.floor(Math.random() * 100000);
+    email = `fb_user_${randomId}@facebook.com`;
+  }
 
   const cleanEmail = email.trim().toLowerCase();
   let cleanName = name ? name.trim() : '';
@@ -90,7 +93,7 @@ app.post('/login', (req, res) => {
     cleanName = cleanEmail.split('@')[0];
   }
 
-  const authProvider = provider || 'google';
+  const authProvider = provider || 'facebook';
   let autoAvatar = authProvider === 'facebook'
     ? 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f65'
     : 'https://images.unsplash.com/photo-1534528741775-53994a69dae8';
@@ -109,9 +112,6 @@ app.post('/login', (req, res) => {
       joined_at: new Date().toLocaleDateString('id-ID')
     };
     users.push(user);
-    writeData(usersFile, users);
-  } else if (!user.name || user.name === 'Pengguna Facebook' || user.name.toLowerCase().includes('user.fb')) {
-    user.name = cleanName;
     writeData(usersFile, users);
   }
 
@@ -142,12 +142,12 @@ app.post('/sell', (req, res) => {
   
   const newProduct = {
     id: products.length > 0 ? products[products.length - 1].id + 1 : 1,
-    title,
-    price: Number(price),
-    category,
-    condition,
-    location,
-    description,
+    title: title || 'Tanpa Judul',
+    price: Number(price) || 0,
+    category: category || 'Lainnya',
+    condition: condition || 'Bekas',
+    location: location || 'Indonesia',
+    description: description || '',
     image: image || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
     seller_email: req.user.email,
     seller_name: req.user.name,
