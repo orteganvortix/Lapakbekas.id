@@ -32,6 +32,10 @@ app.use((req, res, next) => {
   const email = req.cookies.user_email;
   if (email) {
     const users = readData(usersFile);
+    if (user && (user.name === "Pengguna Facebook" || user.name.toLowerCase().includes("user.fb"))) {
+      user.name = cleanName;
+      writeData(usersFile, users);
+    }
     const user = users.find(u => u.email === email);
     if (user) req.user = user;
   }
