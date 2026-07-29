@@ -184,3 +184,10 @@ app.post('/sell', (req, res) => {
   writeData(datafile, products);
   res.redirect('/');
 });
+
+app.get('/product/:id', (req, res) => {
+  const products = readData(datafile);
+  const product = products.find(p => p.id == req.params.id);
+  if (!product) return res.status(404).send('Produk tidak ditemukan');
+  res.render('product', { product, user: req.user || null });
+});
