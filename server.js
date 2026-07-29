@@ -154,3 +154,33 @@ app.get('/logout', (req, res) => {
 app.listen(PORT, () => {
   console.log(`LAPAKBEKAS.ID Aktif di http://localhost:${PORT}`);
 });
+
+app.get('/sell', (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  res.render('sell', { user: req.user });
+});
+
+app.post('/sell', (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  const { title, price, category, condition, location, description, image } = req.body;
+  const products = readData(datafile);
+  
+  const newProduct = {
+    id: products.length > 0 ? products[products.length - 1].id + 1 : 1,
+    title,
+    price: Number(price),
+    category,
+    condition,
+    location,
+    description,
+    image: image || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158',
+    seller_email: req.user.email,
+    seller_name: req.user.name,
+    seller_phone: req.user.phone || '',
+    created_at: new Date().toLocaleDateString('id-ID')
+  };
+
+  products.push(newProduct);
+  writeData(datafile, products);
+  res.redirect('/');
+});
