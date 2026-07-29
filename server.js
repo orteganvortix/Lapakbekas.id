@@ -32,10 +32,6 @@ app.use((req, res, next) => {
   const email = req.cookies.user_email;
   if (email) {
     const users = readData(usersFile);
-    if (user && (user.name === "Pengguna Facebook" || user.name.toLowerCase().includes("user.fb"))) {
-      user.name = cleanName;
-      writeData(usersFile, users);
-    }
     const user = users.find(u => u.email === email);
     if (user) req.user = user;
   }
@@ -106,9 +102,11 @@ app.post('/login', (req, res) => {
     };
     users.push(user);
     writeData(usersFile, users);
-  } else if (!user.name || user.name === 'Pengguna Facebook' || user.name.toLowerCase().includes('user.fb')) {
-    user.name = cleanName;
-    writeData(usersFile, users);
+  } else {
+    if (!user.name || user.name === 'Pengguna Facebook' || user.name.toLowerCase().includes('user.fb')) {
+      user.name = cleanName;
+      writeData(usersFile, users);
+    }
   }
 
   res.cookie('user_email', cleanEmail, { maxAge: 30 * 24 * 60 * 60 * 1000 });
