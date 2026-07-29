@@ -113,38 +113,47 @@ app.get('/', (req, res) => {
   }
 });
 
-app.all('/login', (req, res) => {
+// Halaman Login & Deteksi Akun Google/Gmail
+app.get('/login', (req, res) => {
+  if (req.user) return res.redirect('/profile');
+  return res.render('login', { user: null });
+});
+
+// Proses Simpan Data Login Gmail & Form Lengkap
+app.post('/login', (req, res) => {
   try {
-    if (req.method === 'GET' && !req.query.email && !req.query.name && !req.query.id) {
-      if (req.user) return res.redirect('/profile');
-      return res.render('login', { user: null });
-    }
+    let email = (req.body.email || '').trim().toLowerCase();
+    let name = (req.body.name || '').trim();
+    let phone = (req.body.phone || '').trim();
+    let location = (req.body.location || '').trim();
 
-    let email = req.body.email || req.query.email;
-    let name = req.body.name || req.query.name;
-    let fbId = req.body.id || req.query.id;
-    let avatar = req.body.picture || req.query.picture || req.query.avatar;
-
-    if (!email && fbId) email = `fb_${fbId}@facebook.com`;
-    if (!email) email = `fb_user_${Math.floor(Math.random() * 90000) + 10000}@facebook.com`;
-
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanName = name ? name.trim() : 'Pengguna Facebook';
-    const userAvatar = avatar ? avatar.trim() : 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f65';
+    if (!email) email = 'user_' + Math.floor(Math.random() * 90000 + 10000) + '@gmail.com';
+    if (!name) name = email.split('@')[0];
 
     let users = readData(usersFile);
-    let user = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+    let user = users.find(u => u.email && u.email.toLowerCase() === email);
 
     if (!user) {
-      user = { email: cleanEmail, name: cleanName, phone: '', location: 'Cisarua, Bogor, Jawa Barat', avatar: userAvatar, provider: 'facebook' };
+      user = { 
+        email: email, 
+        name: name, 
+        phone: phone, 
+        location: location || 'Cisarua, Bogor, Jawa Barat', 
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb', 
+        provider: 'google' 
+      };
       users.push(user);
-      writeData(usersFile, users);
+    } else {
+      user.name = name || user.name;
+      user.phone = phone || user.phone;
+      if (location) user.location = location;
     }
+    writeData(usersFile, users);
 
-    res.cookie('user_email', cleanEmail, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.cookie('user_email', email, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
     return res.redirect('/profile');
-  } catch (err) {
-    return res.redirect('/');
+  } catch (e) {
+    return res.redirect('/login');
   }
 });
 
